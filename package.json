@@ -25,6 +25,7 @@
     "hardhat-storage-layout": "^0.1.6"
   },
   "scripts": {
+    "build": "forge build && yarn typechain",
     "forge": "forge",
     "prettier": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol' --config .prettierrc",
     "lint": "prettier --list-different --plugin=prettier-plugin-solidity 'contracts/**/*.sol' --config .prettierrc",
