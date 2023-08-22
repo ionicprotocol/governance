@@ -34,6 +34,19 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
     });
     console.log(`IonicToken deployed at ${ionicToken.address}`);
 
+    const voteEscrowContract = await ethers.getContractOrNull("VoteEscrow");
+
+    if (voteEscrowContract) {
+      const mockBridge = await deployments.deploy("MockBridge", {
+        contract: "MockBridge",
+        from: deployer,
+        args: [voteEscrowContract.address],
+        log: true,
+        waitConfirmations: 1,
+      });
+      console.log(`MockBridge deployed at ${mockBridge.address}`);
+    }
+
     // lock ION for testing
     lockedTokenAddress = ionicToken.address;
   } else {
@@ -135,12 +148,14 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
   });
   console.log(`Voter deployed at ${voter.address}`);
 
-  const voteEscrowContract = await ethers.getContractAt(voteEscrow.abi, voteEscrow.address);
-  let tx = await voteEscrowContract.setVoter(voter.address);
-  await tx.wait();
-  console.log(`set the voter in the escrow with tx ${tx.hash}`);
+  const voteEscrowContract = await ethers.getContract("VoteEscrow") as VoteEscrow;
 
-  // TODO configure a bridge
+  const currentVoter = await voteEscrowContract.callStatic.voter();
+  if (currentVoter != voter.address) {
+    let tx = await voteEscrowContract.setVoter(voter.address);
+    await tx.wait();
+    console.log(`set the voter in the escrow with tx ${tx.hash}`);
+  }
 };
 
 func.tags = ["prod"];
