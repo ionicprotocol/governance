@@ -1,4 +1,5 @@
 import { task, types } from "hardhat/config";
+
 import { MockBridge } from "../typechain/MockBridge";
 
 export default task("bridge:mint", "Mint NFT to address")

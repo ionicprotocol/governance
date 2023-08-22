@@ -1,4 +1,5 @@
 import { task, types } from "hardhat/config";
+
 import { VoteEscrow } from "../typechain/VoteEscrow";
 
 // npx hardhat voter:factory --action 0 --gauge 0x000 --network chapel

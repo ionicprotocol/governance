@@ -1,7 +1,6 @@
 import { DeployFunction } from "hardhat-deploy/types";
-import { VoteEscrow } from "../typechain/VoteEscrow";
 
-const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments, getChainId }): Promise<void> => {
+const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, getChainId }): Promise<void> => {
   console.log("RPC URL: ", ethers.provider.connection.url);
   const chainId = parseInt(await getChainId());
   console.log("chainId: ", chainId);
@@ -11,7 +10,7 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
   const CHAPEL_ID = 97;
   const HARDHAT_ID = 1337;
   const MUMBAI_ID = 80001;
-  const ARBI_ID = 42161;
+  // const ARBI_ID = 42161;
 
   let lockedTokenAddress;
   if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID) {
@@ -136,7 +135,7 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
   console.log(`Voter deployed at ${voter.address}`);
 
   const voteEscrowContract = await ethers.getContractAt(voteEscrow.abi, voteEscrow.address);
-  let tx = await voteEscrowContract.setVoter(voter.address);
+  const tx = await voteEscrowContract.setVoter(voter.address);
   await tx.wait();
   console.log(`set the voter in the escrow with tx ${tx.hash}`);
 
