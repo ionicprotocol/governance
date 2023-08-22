@@ -1,18 +1,6 @@
 import { task, types } from "hardhat/config";
 import { VoteEscrow } from "../typechain/VoteEscrow";
 
-/*
-in VoteEscrow:
-create_lock
-withdraw
-merge
-split
-
-in the MockBridge:
-burn
-mint
-*/
-
 // npx hardhat voter:factory --action 0 --gauge 0x000 --network chapel
 export default task("ve:create-lock", "increase the max gas fees to speed up a tx")
   .addParam("signer", "The address of the current deployer", "deployer", types.string)

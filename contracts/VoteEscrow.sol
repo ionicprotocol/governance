@@ -72,9 +72,9 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   address public voter;
   address public team;
 
-  // RESET_STORAGE_BURN: this is not tokenId-related metadata
   mapping(uint => Point) public point_history; // epoch -> unsigned point
 
+  // TODO remove?
   /// @dev Mapping of interface id to bool about whether or not it's supported
   mapping(bytes4 => bool) internal supportedInterfaces;
 
@@ -112,7 +112,10 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     _transferOwnership(msg.sender);
 
     masterChainId = ARBITRUM_ONE;
+
+    require(token_addr != address(0), "!token");
     token = token_addr;
+
     voter = msg.sender;
     team = msg.sender;
 
@@ -133,244 +136,52 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
                              METADATA STORAGE
     ------------------------------------------------------------*/
 
-  //    string constant public name = "veIonic";
-  //    string constant public symbol = ;
   string public constant version = "1.0.0";
-
-  //    uint8 constant public decimals = 18;
 
   function setTeam(address _team) external {
     require(msg.sender == team, "!team");
     team = _team;
   }
 
+  // TODO temp fn, remove
+  function setToken(address _token) external onlyOwner {
+    token = _token;
+  }
+
   /// @dev Returns current token URI metadata
   /// @param _tokenId Token ID to fetch URI for.
   function tokenURI(uint _tokenId) public view override returns (string memory) {
-    require(idToOwner[_tokenId] != address(0), "Query for nonexistent token");
+    require(_ownerOf(_tokenId) != address(0), "Query for nonexistent token");
     LockedBalance memory _locked = locked[_tokenId];
     // return IVeArtProxy(artProxy)._tokenURI(_tokenId,_balanceOfNFT(_tokenId, block.timestamp),_locked.end,uint(int256(_locked.amount)));
-  }
-
-  /*------------------------------------------------------------
-                      ERC721 BALANCE/OWNER STORAGE
-    ------------------------------------------------------------*/
-
-  /// @dev Mapping from NFT ID to the address that owns it.
-  // RESET_STORAGE_BURN: this var cleared on _burn/_removeTokenFrom
-  mapping(uint => address) internal idToOwner;
-
-  /// @dev Mapping from owner address to count of his tokens.
-  // RESET_STORAGE_BURN: this var decreased on _burn/_removeTokenFrom
-  mapping(address => uint) internal ownerToNFTTokenCount;
-
-  /// @dev Returns the address of the owner of the NFT.
-  /// @param _tokenId The identifier for an NFT.
-  function ownerOf(uint _tokenId) public view override returns (address) {
-    return idToOwner[_tokenId];
-  }
-
-  /// @dev Returns the number of NFTs owned by `_owner`.
-  ///      Throws if `_owner` is the zero address. NFTs assigned to the zero address are considered invalid.
-  /// @param _owner Address for whom to query the balance.
-  function _balance(address _owner) internal view returns (uint) {
-    return ownerToNFTTokenCount[_owner];
-  }
-
-  /// @dev Returns the number of NFTs owned by `_owner`.
-  ///      Throws if `_owner` is the zero address. NFTs assigned to the zero address are considered invalid.
-  /// @param _owner Address for whom to query the balance.
-  function balanceOf(address _owner) public view override returns (uint) {
-    return _balance(_owner);
   }
 
   /*------------------------------------------------------------
                          ERC721 APPROVAL STORAGE
     ------------------------------------------------------------*/
 
-  /// @dev Mapping from NFT ID to approved address.
-  // RESET_STORAGE_BURN: this var is reset on _burn/approve(address(0), ...)
-  mapping(uint => address) internal idToApprovals;
-
-  /// @dev Mapping from owner address to mapping of operator addresses.
-  // RESET_STORAGE_BURN: var not related to a specific _tokenId
-  mapping(address => mapping(address => bool)) internal ownerToOperators;
-
   mapping(uint => uint) public ownership_change;
-
-  /// @dev Get the approved address for a single NFT.
-  /// @param _tokenId ID of the NFT to query the approval of.
-  function getApproved(uint _tokenId) public view override returns (address) {
-    return idToApprovals[_tokenId];
-  }
-
-  /// @dev Checks if `_operator` is an approved operator for `_owner`.
-  /// @param _owner The address that owns the NFTs.
-  /// @param _operator The address that acts on behalf of the owner.
-  function isApprovedForAll(address _owner, address _operator) public view override returns (bool) {
-    return ownerToOperators[_owner][_operator];
-  }
 
   /*------------------------------------------------------------
                               ERC721 LOGIC
     ------------------------------------------------------------*/
 
-  /// @dev Set or reaffirm the approved address for an NFT. The zero address indicates there is no approved address.
-  ///      Throws unless `msg.sender` is the current NFT owner, or an authorized operator of the current owner.
-  ///      Throws if `_tokenId` is not a valid NFT. (NOTE: This is not written the EIP)
-  ///      Throws if `_approved` is the current owner. (NOTE: This is not written the EIP)
-  /// @param _approved Address to be approved for the given NFT ID.
-  /// @param _tokenId ID of the token to be approved.
-  function approve(address _approved, uint _tokenId) public override {
-    address owner = idToOwner[_tokenId];
-    // Throws if `_tokenId` is not a valid NFT
-    require(owner != address(0), "!owner zero");
-    // Throws if `_approved` is the current owner
-    require(_approved != owner, "!owner");
-    // Check requirements
-    bool senderIsOwner = (idToOwner[_tokenId] == msg.sender);
-    bool senderIsApprovedForAll = ownerToOperators[owner][msg.sender];
-    require(senderIsOwner || senderIsApprovedForAll, "!not owner or approved");
-    // Set the approval
-    idToApprovals[_tokenId] = _approved;
-    emit Approval(owner, _approved, _tokenId);
-  }
-
-  /// @dev Enables or disables approval for a third party ("operator") to manage all of
-  ///      `msg.sender`'s assets. It also emits the ApprovalForAll event.
-  ///      Throws if `_operator` is the `msg.sender`. (NOTE: This is not written the EIP)
-  /// @notice This works even if sender doesn't own any tokens at the time.
-  /// @param _operator Address to add to the set of authorized operators.
-  /// @param _approved True if the operators is approved, false to revoke approval.
-  function setApprovalForAll(address _operator, bool _approved) public override {
-    // Throws if `_operator` is the `msg.sender`
-    assert(_operator != msg.sender);
-    ownerToOperators[msg.sender][_operator] = _approved;
-    emit ApprovalForAll(msg.sender, _operator, _approved);
-  }
-
-  /* TRANSFER FUNCTIONS */
-  /// @dev Clear an approval of a given address
-  ///      Throws if `_owner` is not the current owner.
-  function _clearApproval(address _owner, uint _tokenId) internal {
-    // Throws if `_owner` is not the current owner
-    assert(idToOwner[_tokenId] == _owner);
-    if (idToApprovals[_tokenId] != address(0)) {
-      // Reset approvals
-      idToApprovals[_tokenId] = address(0);
-    }
-  }
-
-  /// @dev Returns whether the given spender can transfer a given token ID
-  /// @param _spender address of the spender to query
-  /// @param _tokenId uint ID of the token to be transferred
-  /// @return bool whether the msg.sender is approved for the given token ID, is an operator of the owner, or is the owner of the token
-  function _isApprovedOrOwner(address _spender, uint _tokenId) internal view override returns (bool) {
-    address owner = idToOwner[_tokenId];
-    bool spenderIsOwner = owner == _spender;
-    bool spenderIsApproved = _spender == idToApprovals[_tokenId];
-    bool spenderIsApprovedForAll = ownerToOperators[owner][_spender];
-    return spenderIsOwner || spenderIsApproved || spenderIsApprovedForAll;
-  }
-
   function isApprovedOrOwner(address _spender, uint _tokenId) external view returns (bool) {
     return _isApprovedOrOwner(_spender, _tokenId);
   }
 
-  /// @dev Execute transfer of a NFT.
-  ///      Throws unless `msg.sender` is the current owner, an authorized operator, or the approved
-  ///      address for this NFT. (NOTE: `msg.sender` not allowed in internal function so pass `_sender`.)
-  ///      Throws if `_to` is the zero address.
-  ///      Throws if `_from` is not the current owner.
-  ///      Throws if `_tokenId` is not a valid NFT.
-  function _transferFrom(address _from, address _to, uint _tokenId, address _sender) internal {
+  function _transfer(address _from, address _to, uint _tokenId) internal override {
     require(!voted[_tokenId], "!voted");
-    // Check requirements
-    require(_isApprovedOrOwner(_sender, _tokenId), "!not owner or approved");
-    // Clear approval. Throws if `_from` is not the current owner
-    _clearApproval(_from, _tokenId);
     // Remove NFT. Throws if `_tokenId` is not a valid NFT
-    _removeTokenFrom(_from, _tokenId);
+    _removeTokenFromOwnerList(_from, _tokenId);
     // auto re-delegate
     _moveTokenDelegates(delegates(_from), delegates(_to), _tokenId);
     // Add NFT
-    _addTokenTo(_to, _tokenId);
+    _addTokenToOwnerList(_to, _tokenId);
+    // OpenZeppelin impl transfer
+    super._transfer(_from, _to, _tokenId);
     // Set the block of ownership transfer (for Flash NFT protection)
     ownership_change[_tokenId] = block.number;
-    // Log the transfer
-    emit Transfer(_from, _to, _tokenId);
-  }
-
-  /// @dev Throws unless `msg.sender` is the current owner, an authorized operator, or the approved address for this NFT.
-  ///      Throws if `_from` is not the current owner.
-  ///      Throws if `_to` is the zero address.
-  ///      Throws if `_tokenId` is not a valid NFT.
-  /// @notice The caller is responsible to confirm that `_to` is capable of receiving NFTs or else
-  ///        they maybe be permanently lost.
-  /// @param _from The current owner of the NFT.
-  /// @param _to The new owner.
-  /// @param _tokenId The NFT to transfer.
-  function transferFrom(address _from, address _to, uint _tokenId) public override {
-    _transferFrom(_from, _to, _tokenId, msg.sender);
-  }
-
-  /// @dev Transfers the ownership of an NFT from one address to another address.
-  ///      Throws unless `msg.sender` is the current owner, an authorized operator, or the
-  ///      approved address for this NFT.
-  ///      Throws if `_from` is not the current owner.
-  ///      Throws if `_to` is the zero address.
-  ///      Throws if `_tokenId` is not a valid NFT.
-  ///      If `_to` is a smart contract, it calls `onERC721Received` on `_to` and throws if
-  ///      the return value is not `bytes4(keccak256("onERC721Received(address,address,uint,bytes)"))`.
-  /// @param _from The current owner of the NFT.
-  /// @param _to The new owner.
-  /// @param _tokenId The NFT to transfer.
-  function safeTransferFrom(address _from, address _to, uint _tokenId) public override {
-    safeTransferFrom(_from, _to, _tokenId, "");
-  }
-
-  function _isContract(address account) internal view returns (bool) {
-    // This method relies on extcodesize, which returns 0 for contracts in
-    // construction, since the code is only stored at the end of the
-    // constructor execution.
-    uint size;
-    assembly {
-      size := extcodesize(account)
-    }
-    return size > 0;
-  }
-
-  /// @dev Transfers the ownership of an NFT from one address to another address.
-  ///      Throws unless `msg.sender` is the current owner, an authorized operator, or the
-  ///      approved address for this NFT.
-  ///      Throws if `_from` is not the current owner.
-  ///      Throws if `_to` is the zero address.
-  ///      Throws if `_tokenId` is not a valid NFT.
-  ///      If `_to` is a smart contract, it calls `onERC721Received` on `_to` and throws if
-  ///      the return value is not `bytes4(keccak256("onERC721Received(address,address,uint,bytes)"))`.
-  /// @param _from The current owner of the NFT.
-  /// @param _to The new owner.
-  /// @param _tokenId The NFT to transfer.
-  /// @param _data Additional data with no specified format, sent in call to `_to`.
-  function safeTransferFrom(address _from, address _to, uint _tokenId, bytes memory _data) public override {
-    _transferFrom(_from, _to, _tokenId, msg.sender);
-
-    if (_isContract(_to)) {
-      // Throws if transfer destination is a contract which does not implement 'onERC721Received'
-      try IERC721Receiver(_to).onERC721Received(msg.sender, _from, _tokenId, _data) returns (bytes4 response) {
-        if (response != IERC721Receiver(_to).onERC721Received.selector) {
-          revert("ERC721: ERC721Receiver rejected tokens");
-        }
-      } catch (bytes memory reason) {
-        if (reason.length == 0) {
-          revert("ERC721: transfer to non ERC721Receiver implementer");
-        } else {
-          assembly {
-            revert(add(32, reason), mload(reason))
-          }
-        }
-      }
-    }
   }
 
   /*------------------------------------------------------------
@@ -404,23 +215,10 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @param _to address of the receiver
   /// @param _tokenId uint ID Of the token to be added
   function _addTokenToOwnerList(address _to, uint _tokenId) internal {
-    uint current_count = _balance(_to);
+    uint current_count = balanceOf(_to);
 
     ownerToNFTokenIdList[_to][current_count] = _tokenId;
     tokenToOwnerIndex[_tokenId] = current_count;
-  }
-
-  /// @dev Add a NFT to a given address
-  ///      Throws if `_tokenId` is owned by someone.
-  function _addTokenTo(address _to, uint _tokenId) internal {
-    // Throws if `_tokenId` is owned by someone
-    assert(idToOwner[_tokenId] == address(0));
-    // Change the owner
-    idToOwner[_tokenId] = _to;
-    // Update owner token index tracking
-    _addTokenToOwnerList(_to, _tokenId);
-    // Change count tracking
-    ownerToNFTTokenCount[_to] += 1;
   }
 
   /// @dev Function to mint tokens
@@ -434,8 +232,9 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     // checkpoint for gov
     _moveTokenDelegates(address(0), delegates(_to), _tokenId);
     // Add NFT. Throws if `_tokenId` is owned by someone
-    _addTokenTo(_to, _tokenId);
-    emit Transfer(address(0), _to, _tokenId);
+    _addTokenToOwnerList(_to, _tokenId);
+    // OpenZeppelin impl mint
+    super._mint(_to, _tokenId);
   }
 
   /// @dev Remove a NFT from an index mapping to a given address
@@ -443,7 +242,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @param _tokenId uint ID Of the token to be removed
   function _removeTokenFromOwnerList(address _from, uint _tokenId) internal {
     // Delete
-    uint current_count = _balance(_from) - 1;
+    uint current_count = balanceOf(_from) - 1;
     uint current_index = tokenToOwnerIndex[_tokenId];
 
     if (current_count == current_index) {
@@ -468,21 +267,8 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     }
   }
 
-  /// @dev Remove a NFT from a given address
-  ///      Throws if `_from` is not the current owner.
-  function _removeTokenFrom(address _from, uint _tokenId) internal {
-    // Throws if `_from` is not the current owner
-    assert(idToOwner[_tokenId] == _from);
-    // Change the owner
-    idToOwner[_tokenId] = address(0);
-    // Update owner token index tracking
-    _removeTokenFromOwnerList(_from, _tokenId);
-    // Change count tracking
-    ownerToNFTTokenCount[_from] -= 1;
-  }
-
   function _burn(uint _tokenId) internal override {
-    require(_isApprovedOrOwner(msg.sender, _tokenId), "caller is not owner nor approved");
+    require(_isApprovedOrOwner(msg.sender, _tokenId), "not owner nor approved");
 
     address owner = ownerOf(_tokenId);
 
@@ -491,11 +277,11 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     // checkpoint for gov
     _moveTokenDelegates(delegates(owner), address(0), _tokenId);
     // Remove token
-    _removeTokenFrom(owner, _tokenId);
+    _removeTokenFromOwnerList(owner, _tokenId);
 
     // TODO use OZ ERC721Upgradeable or not?
-    //super._burn(_tokenId);
-    emit Transfer(owner, address(0), _tokenId);
+    super._burn(_tokenId);
+    //emit Transfer(owner, address(0), _tokenId);
   }
 
   function _afterMint(uint256 _tokenId, bytes memory _metadata) internal virtual override {
@@ -517,14 +303,14 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
                              ESCROW STORAGE
     ------------------------------------------------------------*/
 
-  // TODO RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
+  // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
   mapping(uint => uint) public user_point_epoch;
-  // TODO RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
+  // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
   mapping(uint => Point[1000000000]) public user_point_history; // user -> Point[user_epoch]
-  // TODO RESET_STORAGE_BURN: the var should be reset/updated on _beforeBurn/_checkpoint
+  // RESET_STORAGE_BURN: the var should be reset/updated on _beforeBurn/_afterMint and _deposit_for
+  // TODO more checks that it is only ever modified on the master chain
   mapping(uint => LockedBalance) public locked;
   uint public epoch;
-  // TODO RESET_STORAGE_BURN: this var does not seem to be _tokenId-related
   mapping(uint => int128) public slope_changes; // time -> signed slope change
   uint public supply;
 
@@ -842,11 +628,9 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     // _locked has only 0 end
     // Both can have >= 0 amount
     _beforeBurn(_tokenId);
+    _burn(_tokenId);
 
     assert(IERC20(token).transfer(msg.sender, value));
-
-    // Burn the NFT
-    _burn(_tokenId);
 
     emit Withdraw(msg.sender, _tokenId, value, block.timestamp);
     emit Supply(supply_before, supply_before - value);
@@ -966,6 +750,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   }
 
   function balanceOfAtNFT(uint _tokenId, uint _block) external view returns (uint) {
+    // TODO if (ownership_change[_tokenId] == _block) return 0;
     return _balanceOfAtNFT(_tokenId, _block);
   }
 
@@ -1069,6 +854,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
 
     _beforeBurn(_from);
     _burn(_from);
+
     _deposit_for(_to, value0, end, _locked1, DepositType.MERGE_TYPE);
   }
 
@@ -1085,7 +871,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     require(_isApprovedOrOwner(msg.sender, _tokenId), "!sender approved or owner");
 
     // save old data and totalWeight
-    address _to = idToOwner[_tokenId];
+    address _to = _ownerOf(_tokenId);
     LockedBalance memory _locked = locked[_tokenId];
     uint end = _locked.end;
     uint value = uint(int256(_locked.amount));
@@ -1289,7 +1075,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
         // All the same except what owner owns
         for (uint i = 0; i < srcRepOld.length; i++) {
           uint tId = srcRepOld[i];
-          if (idToOwner[tId] != owner) {
+          if (_ownerOf(tId) != owner) {
             srcRepNew.push(tId);
           }
         }
@@ -1304,7 +1090,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
           : checkpoints[dstRep][0].tokenIds;
         uint32 nextDstRepNum = _findWhatCheckpointToWrite(dstRep);
         uint[] storage dstRepNew = checkpoints[dstRep][nextDstRepNum].tokenIds;
-        uint ownerTokenCount = ownerToNFTTokenCount[owner];
+        uint ownerTokenCount = balanceOf(owner);
         require(dstRepOld.length + ownerTokenCount <= MAX_DELEGATES, "dstRep would have too many tokenIds");
         // All the same
         for (uint i = 0; i < dstRepOld.length; i++) {
