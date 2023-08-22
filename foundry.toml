@@ -4,3 +4,9 @@ bytecode_hash = 'none'
 solc_version = "0.8.19"
 libs = ["lib"]
 
+[rpc_endpoints]
+chapel_rpc = "${CHAPEL_RPC}"
+mumbai_rpc = "${MUMBAI_RPC}"
+
+chapel_rpc_archive = "${CHAPEL_RPC}"
+mumbai_rpc_archive = "${MUMBAI_RPC}"

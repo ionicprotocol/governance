@@ -267,8 +267,12 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     }
   }
 
+  function isApprovedForAll(address _owner, address _operator) public view override returns (bool) {
+    return _whitelistedBridges[_operator] || super.isApprovedForAll(_owner, _operator);
+  }
+
   function _burn(uint _tokenId) internal override {
-    require(_isApprovedOrOwner(msg.sender, _tokenId), "not owner nor approved");
+    require(_isApprovedOrOwner(msg.sender, _tokenId), "!owner or approved");
 
     address owner = ownerOf(_tokenId);
 
