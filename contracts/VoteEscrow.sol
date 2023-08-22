@@ -111,7 +111,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
 
     _transferOwnership(msg.sender);
 
-    masterChainId = ARBITRUM_ONE;
+    masterChainId = block.chainid == 97 ? 97 : ARBITRUM_ONE;
 
     require(token_addr != address(0), "!token");
     token = token_addr;
@@ -143,9 +143,14 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     team = _team;
   }
 
-  // TODO temp fn, remove
+  // TODO temp fns, remove
   function setToken(address _token) external onlyOwner {
     token = _token;
+  }
+
+  // TODO temp fns, remove
+  function setMasterChain() external onlyOwner {
+    masterChainId = block.chainid == 97 ? 97 : ARBITRUM_ONE;
   }
 
   /// @dev Returns current token URI metadata

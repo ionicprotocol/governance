@@ -48,6 +48,10 @@ abstract contract XERC721Upgradeable is ERC721Upgradeable, Ownable2StepUpgradeab
     _whitelistedBridges[_bridge] = false;
   }
 
+  function isBridge(address _bridge) external view returns (bool) {
+    return _whitelistedBridges[_bridge];
+  }
+
   function mint(address _to, uint256 _tokenId, bytes memory _metadata) public onlyBridge {
     _mint(_to, _tokenId);
     _afterMint(_tokenId, _metadata);
