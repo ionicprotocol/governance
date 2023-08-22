@@ -1,4 +1,5 @@
 import { DeployFunction } from "hardhat-deploy/types";
+
 import { VoteEscrow } from "../typechain/VoteEscrow";
 
 const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, getChainId }): Promise<void> => {
@@ -135,11 +136,11 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   });
   console.log(`Voter deployed at ${voter.address}`);
 
-  const voteEscrowContract = await ethers.getContractOrNull("VoteEscrow") as VoteEscrow;
+  const voteEscrowContract = (await ethers.getContractOrNull("VoteEscrow")) as VoteEscrow;
 
   const currentVoter = await voteEscrowContract.callStatic.voter();
   if (currentVoter != voter.address) {
-    let tx = await voteEscrowContract.setVoter(voter.address);
+    const tx = await voteEscrowContract.setVoter(voter.address);
     await tx.wait();
     console.log(`set the voter in the escrow with tx ${tx.hash}`);
   }
@@ -151,7 +152,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
         from: deployer,
         args: [voteEscrowContract.address],
         log: true,
-        waitConfirmations: 1,
+        waitConfirmations: 1
       });
       console.log(`MockBridge deployed at ${mockBridge.address}`);
     }
