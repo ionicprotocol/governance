@@ -59,7 +59,7 @@ const config: HardhatUserConfig = {
     mumbai: {
       accounts: { mnemonic },
       chainId: 80001,
-      url: OVERRIDE_RPC_URL || "https://rpc-mumbai.maticvigil.com"
+      url: OVERRIDE_RPC_URL || "https://polygon.llamarpc.com/"
     }
   }
 };
