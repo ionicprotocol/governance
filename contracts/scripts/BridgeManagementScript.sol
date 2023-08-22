@@ -13,7 +13,6 @@ import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
 // forge script contracts/scripts/BridgeManagementScript.sol:BridgeManagementScript --rpc-url CHAPEL_RPC --broadcast -vv
 contract BridgeManagementScript is Script, Test {
-
   function run() external {
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     vm.startBroadcast(deployerPrivateKey);

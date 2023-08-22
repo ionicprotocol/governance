@@ -5,6 +5,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13",
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
     "@nomiclabs/hardhat-truffle5": "^2.0.5",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
@@ -21,13 +22,15 @@
     "hardhat-contract-sizer": "^2.5.1",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-spdx-license-identifier": "^2.0.3",
-    "hardhat-storage-layout": "^0.1.6",
-    "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13"
+    "hardhat-storage-layout": "^0.1.6"
   },
   "scripts": {
+    "build": "forge build && yarn typechain",
     "forge": "forge",
     "prettier": "prettier --write --plugin=prettier-plugin-solidity 'contracts/**/*.sol' --config .prettierrc",
-    "lint": "prettier --list-different 'contracts/**/*.sol'",
+    "lint": "prettier --list-different --plugin=prettier-plugin-solidity 'contracts/**/*.sol' --config .prettierrc",
+    "lint-ts": "eslint . -c .eslintrc.json --ext ts,json",
+    "lint-fix-ts": "eslint . -c .eslintrc.json --fix --ext ts,json",
     "deploy": "hardhat deploy --tags prod --no-compile",
     "typechain": "echo '> Creating typechain types...'; [ ! -d ./typechain ] && typechain --target ethers-v5 --out-dir './typechain' './out/**/*.json' --show-stack-traces",
     "deploy:localhost": "hardhat --network localhost deploy --tags prod --no-compile",
@@ -38,13 +41,21 @@
     "contracts"
   ],
   "devDependencies": {
-    "@typechain/hardhat": "^9.0.0",
-    "hardhat-deploy": "^0.11.34",
-    "prettier": "^2.6.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.19",
-    "typechain": "^8.3.1",
+    "@tsconfig/recommended": "^1.0.2",
     "@typechain/ethers-v5": "^11.1.0",
-    "typescript": "^5.1.6",
-    "ts-node": "^10.9.1"
+    "@typechain/hardhat": "^9.0.0",
+    "@types/eslint": "^8.44.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-prettier": "^5.0.0",
+    "hardhat-deploy": "^0.11.34",
+    "prettier": "3.0.0",
+    "prettier-plugin-solidity": "1.1.3",
+    "ts-node": "^10.9.1",
+    "typechain": "^8.3.1",
+    "typescript": "^5.1.6"
   }
 }
