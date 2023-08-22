@@ -12,6 +12,8 @@ on:
 
 env:
   FOUNDRY_PROFILE: ci
+  CHAPEL_RPC: https://data-seed-prebsc-1-s1.binance.org:8545/
+  MUMBAI_RPC: https://rpc-mumbai.maticvigil.com
 
 jobs:
   lint:
