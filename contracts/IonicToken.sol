@@ -15,4 +15,8 @@ contract IonicToken is XERC20Upgradeable {
 
     _setOwner(msg.sender);
   }
+
+  function isBridge(address _bridge) external view returns (bool) {
+    return _whitelistedBridges[_bridge];
+  }
 }

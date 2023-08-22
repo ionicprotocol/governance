@@ -73,8 +73,10 @@ contract BridgingTest is Test {
     ve = bridge.ve();
     token = IonicToken(ve.token());
 
-    vm.prank(token.owner());
-    token.addBridge(address(this));
+    if (!token.isBridge(address(this))) {
+      vm.prank(token.owner());
+      token.addBridge(address(this));
+    }
 
     // mint ION to alice and bob
     token.mint(alice, 100e18);
@@ -97,14 +99,24 @@ contract BridgingTest is Test {
 
     vm.startPrank(alice);
     token.approve(address(ve), 1e36);
-    uint256 aliceNftId = ve.create_lock(20e18, 8 weeks);
+    uint256 aliceLockAmount = 20e18;
+    uint256 aliceNftId = ve.create_lock(aliceLockAmount, 8 weeks);
+    uint256 aliceUnlockTime = ve.locked__end(aliceNftId);
     vm.stopPrank();
 
     bytes memory aliceFromChapel = bridge.burn(aliceNftId);
 
+    {
+      (int128 aliceChapelAmount, uint256 aliceChapelLockTime) = ve.locked(aliceNftId);
+      assertEq(aliceChapelAmount, int128(0), "chapel alice amount");
+      assertEq(aliceChapelLockTime, 0, "chapel alice end ts");
+    }
+
     vm.startPrank(bob);
     token.approve(address(ve), 1e36);
-    uint256 bobNftId = ve.create_lock(10e18, 2 weeks);
+    uint256 bobLockAmount = 10e18;
+    uint256 bobLockTime = 2 weeks;
+    uint256 bobNftId = ve.create_lock(bobLockAmount, bobLockTime);
     vm.stopPrank();
 
     assertGt(bobNftId, aliceNftId, "not incremental");
@@ -127,5 +139,9 @@ contract BridgingTest is Test {
     bridge.mint(alice, aliceNftId, aliceFromMumbai);
     shouldBeAlice = ve.ownerOf(aliceNftId);
     assertEq(shouldBeAlice, alice, "chapel owner is not alice");
+
+    (int128 aliceAmount, uint256 aliceEndTs) = ve.locked(aliceNftId);
+    assertEq(aliceAmount, int128(uint128(aliceLockAmount)), "alice amount");
+    assertEq(aliceEndTs, aliceUnlockTime, "alice end ts");
   }
 }

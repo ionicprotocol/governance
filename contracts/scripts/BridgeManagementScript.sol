@@ -42,9 +42,17 @@ contract BridgeManagementScript is Script, Test {
     emit log_named_address("ve owner", address(ve.owner()));
     emit log_named_address("caller", vm.addr(deployerPrivateKey));
 
-    ProxyAdmin dpa = ProxyAdmin(dpaAddr);
-    VoteEscrow veImpl = VoteEscrow(0x37fbAa9DBC39832D3BBEc55495b6CAF51DD1561c); //new VoteEscrow();
-    dpa.upgrade(ITransparentUpgradeableProxy(payable(veAddr)), address(veImpl));
+    //    {
+    //      ProxyAdmin dpa = ProxyAdmin(dpaAddr);
+    //      VoteEscrow veImpl = VoteEscrow(0x37fbAa9DBC39832D3BBEc55495b6CAF51DD1561c); //new VoteEscrow();
+    //      dpa.upgrade(ITransparentUpgradeableProxy(payable(veAddr)), address(veImpl));
+    //    }
+
+    {
+      ProxyAdmin dpa = ProxyAdmin(dpaAddr);
+      IonicToken tokImpl = IonicToken(0xcad00b61C00F6282A125332B7f88CCa86989db35); //new VoteEscrow();
+      dpa.upgrade(ITransparentUpgradeableProxy(payable(ionicTokenAddr)), address(tokImpl));
+    }
 
     //ve.setMasterChain();
 
