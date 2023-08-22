@@ -34,19 +34,6 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
     });
     console.log(`IonicToken deployed at ${ionicToken.address}`);
 
-    const voteEscrowContract = await ethers.getContractOrNull("VoteEscrow");
-
-    if (voteEscrowContract) {
-      const mockBridge = await deployments.deploy("MockBridge", {
-        contract: "MockBridge",
-        from: deployer,
-        args: [voteEscrowContract.address],
-        log: true,
-        waitConfirmations: 1,
-      });
-      console.log(`MockBridge deployed at ${mockBridge.address}`);
-    }
-
     // lock ION for testing
     lockedTokenAddress = ionicToken.address;
   } else {
@@ -155,6 +142,19 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
     let tx = await voteEscrowContract.setVoter(voter.address);
     await tx.wait();
     console.log(`set the voter in the escrow with tx ${tx.hash}`);
+  }
+
+  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID) {
+    if (voteEscrowContract) {
+      const mockBridge = await deployments.deploy("MockBridge", {
+        contract: "MockBridge",
+        from: deployer,
+        args: [voteEscrowContract.address],
+        log: true,
+        waitConfirmations: 1,
+      });
+      console.log(`MockBridge deployed at ${mockBridge.address}`);
+    }
   }
 };
 
