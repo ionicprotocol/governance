@@ -170,8 +170,18 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     return _isApprovedOrOwner(_spender, _tokenId);
   }
 
-  function _transfer(address _from, address _to, uint _tokenId) internal override {
+  function onlyApprovedOrOwner(address _sender, uint256 _tokenId) internal view {
+    require(_isApprovedOrOwner(_sender, _tokenId), "!owner or approved");
+  }
+
+  function onlyNotVoted(uint256 _tokenId) internal view {
     require(!voted[_tokenId], "!voted");
+  }
+
+  function _transfer(address _from, address _to, uint _tokenId) internal override {
+    onlyApprovedOrOwner(_from, _tokenId);
+    onlyNotVoted(_tokenId);
+
     // Remove NFT. Throws if `_tokenId` is not a valid NFT
     _removeTokenFromOwnerList(_from, _tokenId);
     // auto re-delegate
@@ -268,7 +278,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   }
 
   function _burn(uint _tokenId) internal override {
-    require(_isApprovedOrOwner(msg.sender, _tokenId), "not owner nor approved");
+    onlyApprovedOrOwner(msg.sender, _tokenId);
 
     address owner = ownerOf(_tokenId);
 
@@ -584,8 +594,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @notice Deposit `_value` additional tokens for `_tokenId` without modifying the unlock time
   /// @param _value Amount of tokens to deposit and add to the lock
   function increase_amount(uint _tokenId, uint _value) external nonReentrant {
-    assert(_isApprovedOrOwner(msg.sender, _tokenId));
-
+    onlyApprovedOrOwner(msg.sender, _tokenId);
     LockedBalance memory _locked = locked[_tokenId];
 
     assert(_value > 0); // dev: need non-zero value
@@ -598,7 +607,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @notice Extend the unlock time for `_tokenId`
   /// @param _lock_duration New number of seconds until tokens unlock
   function increase_unlock_time(uint _tokenId, uint _lock_duration) external nonReentrant {
-    assert(_isApprovedOrOwner(msg.sender, _tokenId));
+    onlyApprovedOrOwner(msg.sender, _tokenId);
 
     LockedBalance memory _locked = locked[_tokenId];
     uint unlock_time = ((block.timestamp + _lock_duration) / TWO_WEEKS) * TWO_WEEKS; // Locktime is rounded down to weeks
@@ -614,8 +623,8 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @notice Withdraw all tokens for `_tokenId`
   /// @dev Only possible if the lock has expired
   function withdraw(uint _tokenId) external nonReentrant onlyOnMasterChain {
-    assert(_isApprovedOrOwner(msg.sender, _tokenId));
-    require(!voted[_tokenId], "!voted");
+    onlyApprovedOrOwner(msg.sender, _tokenId);
+    onlyNotVoted(_tokenId);
 
     LockedBalance memory _locked = locked[_tokenId];
     require(block.timestamp >= _locked.end, "The lock didn't expire");
@@ -867,8 +876,8 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     require(amounts.length > 0, "zero len amounts input");
 
     // check permission and vote
-    require(!voted[_tokenId], "!voted");
-    require(_isApprovedOrOwner(msg.sender, _tokenId), "!sender approved or owner");
+    onlyNotVoted(_tokenId);
+    onlyApprovedOrOwner(msg.sender, _tokenId);
 
     // save old data and totalWeight
     address _to = _ownerOf(_tokenId);
