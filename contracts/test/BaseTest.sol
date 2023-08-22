@@ -254,10 +254,25 @@ contract BaseTest is Test {
 
     // signer1 should have less weight because of less lock time
     assertApproxEqAbs(ve.balanceOfNFT(tokenId1), 100e18, 1e18, "testLockDurationEffect/wrong-nft-weight");
-    assertApproxEqAbs(ve.balanceOfNFTAt(tokenId2, block.timestamp), 50e18, 1e18, "testLockDurationEffect/wrong-nft-at-weight");
-    assertApproxEqAbs(ve.balanceOfAtNFT(tokenId1, block.number), 100e18, 1e18, "testLockDurationEffect/wrong-at-nft-weight");
+    assertApproxEqAbs(
+      ve.balanceOfNFTAt(tokenId2, block.timestamp),
+      50e18,
+      1e18,
+      "testLockDurationEffect/wrong-nft-at-weight"
+    );
+    assertApproxEqAbs(
+      ve.balanceOfAtNFT(tokenId1, block.number),
+      100e18,
+      1e18,
+      "testLockDurationEffect/wrong-at-nft-weight"
+    );
     assertApproxEqAbs(ve.totalSupplyAt(block.number), 150e18, 2e18, "testLockDurationEffect/wrong-supply-at-weight");
-    assertApproxEqAbs(ve.totalSupplyAtT(block.timestamp), 150e18, 2e18, "testLockDurationEffect/wrong-supply-at-t-weight");
+    assertApproxEqAbs(
+      ve.totalSupplyAtT(block.timestamp),
+      150e18,
+      2e18,
+      "testLockDurationEffect/wrong-supply-at-t-weight"
+    );
   }
 
   function testMergeSplit() public {
@@ -347,7 +362,7 @@ contract BaseTest is Test {
     address owner = ve.ownerOf(tokenId);
 
     assertEq(owner, address(this), "testIonicWithdraw/wrong-owner");
-    
+
     vm.warp(block.timestamp + 53 weeks);
 
     ve.withdraw(tokenId);

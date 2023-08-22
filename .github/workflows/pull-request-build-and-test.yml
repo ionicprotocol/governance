@@ -14,7 +14,36 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 18
+
+      - name: Install Npm dependencies
+        run: yarn install
+
+      - name: Install Npm dependencies
+        run: yarn build
+
+      - name: Lint Contracts
+        run: yarn lint
+
+      - name: Lint TS
+        run: yarn lint-ts
+
   check:
+    needs: [lint]
     strategy:
       fail-fast: true
 
@@ -40,4 +69,3 @@ jobs:
         run: |
           forge test -vvv
         id: test
-
