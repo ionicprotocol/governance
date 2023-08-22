@@ -13,11 +13,29 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
   const MUMBAI_ID = 80001;
   const ARBI_ID = 42161;
 
-  const ionicTokenAddress = ethers.constants.AddressZero;
   let lockedTokenAddress;
   if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID) {
+    const ionicToken = await deployments.deploy("IonicToken", {
+      contract: "IonicToken",
+      from: deployer,
+      args: [],
+      log: true,
+      waitConfirmations: 1,
+      proxy: {
+        execute: {
+          init: {
+            methodName: "initializeIon",
+            args: []
+          }
+        },
+        owner: deployer,
+        proxyContract: "OpenZeppelinTransparentProxy"
+      }
+    });
+    console.log(`IonicToken deployed at ${ionicToken.address}`);
+
     // lock ION for testing
-    lockedTokenAddress = ionicTokenAddress;
+    lockedTokenAddress = ionicToken.address;
   } else {
     // lockedTokenAddress = BAL8020;
   }
@@ -38,6 +56,7 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
       proxyContract: "OpenZeppelinTransparentProxy"
     }
   });
+  console.log(`VoterRolesAuthority deployed at ${voterRolesAuth.address}`);
 
   const gaugeFactory = await deployments.deploy("GaugeFactory", {
     from: deployer,
@@ -55,6 +74,7 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
       proxyContract: "OpenZeppelinTransparentProxy"
     }
   });
+  console.log(`GaugeFactory deployed at ${gaugeFactory.address}`);
 
   const voteEscrow = await deployments.deploy("VoteEscrow", {
     contract: "VoteEscrow",
@@ -73,9 +93,7 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
       proxyContract: "OpenZeppelinTransparentProxy"
     }
   });
-
-  const ve = (await ethers.getContract("VoteEscrow", deployer)) as VoteEscrow;
-  console.log(JSON.stringify(ve));
+  console.log(`VoteEscrow deployed at ${voteEscrow.address}`);
 
   const timer = await deployments.deploy("EpochsTimer", {
     contract: "EpochsTimer",
@@ -94,6 +112,7 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
       proxyContract: "OpenZeppelinTransparentProxy"
     }
   });
+  console.log(`EpochsTimer deployed at ${timer.address}`);
 
   const bribeFactory = ethers.constants.AddressZero;
 
@@ -114,6 +133,7 @@ const func: DeployFunction = async ({ run, ethers, getNamedAccounts, deployments
       proxyContract: "OpenZeppelinTransparentProxy"
     }
   });
+  console.log(`Voter deployed at ${voter.address}`);
 
   const voteEscrowContract = await ethers.getContractAt(voteEscrow.abi, voteEscrow.address);
   let tx = await voteEscrowContract.setVoter(voter.address);

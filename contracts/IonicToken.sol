@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import "chain-abstraction-integration/xtoken/XERC20Upgradeable.sol";
 
 contract IonicToken is XERC20Upgradeable {
-  function initialize() public initializer {
+  function initializeIon() public initializer {
     string memory _name = "Ionic Token";
     string memory _symbol = "ION";
 

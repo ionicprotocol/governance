@@ -40,7 +40,7 @@ contract BaseTest is Test {
 
   function setUp() public {
     ionicToken = new IonicToken();
-    ionicToken.initialize();
+    ionicToken.initializeIon();
     ionicToken.addBridge(address(this));
 
     VoterRolesAuthority voterRolesAuthImpl = new VoterRolesAuthority();
@@ -353,7 +353,7 @@ contract BaseTest is Test {
     ve.withdraw(tokenId);
 
     vm.expectRevert("ERC721: invalid token ID");
-    owner = ve.ownerOf(tokenId);
+    ve.ownerOf(tokenId);
   }
 
   function testCreateMarketGauges() public {
