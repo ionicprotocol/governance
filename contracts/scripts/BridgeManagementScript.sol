@@ -24,15 +24,15 @@ contract BridgeManagementScript is Script, Test {
     address dpaAddr;
 
     if (block.chainid == 97) {
-      bridgeAddr = 0xFEbC03Ea04f1E6D71D7e45b431e604537ee7E6a6;
-      veAddr = 0x1800bf8c4D87746857207f56fB522f689551AFFf;
-      ionicTokenAddr = 0x2D51E00Cf28b8A51704CA65c3Cf1Bb8212706ca6;
-      dpaAddr = 0x86e1fd7BfF48d3bC4Ad9d95CF40b523D42E48811;
+      bridgeAddr = 0xF6838DF98b3294E689A6741Ec21C9B07603edaC9;
+      veAddr = 0x6644E6D2e773fE4Bbf8400926924DedD87cd9177;
+      ionicTokenAddr = 0x1F58582511FBD5DC4157527f228B600Be74FEf8b;
+      dpaAddr = 0x4751E54fFE16B7050B8d54710EF30728bcF97945;
     } else if (block.chainid == 80001) {
-      bridgeAddr = 0xFEbC03Ea04f1E6D71D7e45b431e604537ee7E6a6;
-      veAddr = 0x1800bf8c4D87746857207f56fB522f689551AFFf;
-      ionicTokenAddr = 0xE2efE52ae230DBf66438F82c366c1F405Aa1F3A0;
-      dpaAddr = 0x86e1fd7BfF48d3bC4Ad9d95CF40b523D42E48811;
+      bridgeAddr = 0x3B452E7A36812558C2A1a5F0d489C41Ec9374A05;
+      veAddr = 0x1A259641e9bd072caC79e5Fd08B9fcF4A186b97E;
+      ionicTokenAddr = 0xc9247012ba63aD9Ec021048282E0Ff1266Cc2a15;
+      dpaAddr = 0xa3bDf120A0cDF2017a20795b766baE0631B20831;
     }
 
     MockBridge bridge = MockBridge(bridgeAddr);
@@ -43,7 +43,7 @@ contract BridgeManagementScript is Script, Test {
     emit log_named_address("caller", vm.addr(deployerPrivateKey));
 
     ProxyAdmin dpa = ProxyAdmin(dpaAddr);
-    VoteEscrow veImpl = VoteEscrow(0xe6f08927E283D623B74374304b16C710bB0b6220); //new VoteEscrow();
+    VoteEscrow veImpl = VoteEscrow(asdasdasda); //new VoteEscrow();
     dpa.upgrade(ITransparentUpgradeableProxy(payable(veAddr)), address(veImpl));
 
     ve.setToken(ionicTokenAddr);
