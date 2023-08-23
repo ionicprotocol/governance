@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 import "chain-abstraction-integration/xtoken/XERC20Upgradeable.sol";
 
 contract IonicToken is XERC20Upgradeable {
-
   struct AddressSlot {
     address value;
   }
