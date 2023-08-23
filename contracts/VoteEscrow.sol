@@ -151,8 +151,8 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @dev Returns current token URI metadata
   /// @param _tokenId Token ID to fetch URI for.
   function tokenURI(uint _tokenId) public view override returns (string memory) {
-    require(_ownerOf(_tokenId) != address(0), "Query for nonexistent token");
-    LockedBalance memory _locked = locked[_tokenId];
+    require(_ownerOf(_tokenId) != address(0), "!existing");
+    //LockedBalance memory _locked = locked[_tokenId];
     // return IVeArtProxy(artProxy)._tokenURI(_tokenId,_balanceOfNFT(_tokenId, block.timestamp),_locked.end,uint(int256(_locked.amount)));
   }
 
