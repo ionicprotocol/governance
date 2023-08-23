@@ -316,9 +316,10 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   mapping(uint => uint) public user_point_epoch;
   // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
   mapping(uint => Point[1000000000]) public user_point_history; // user -> Point[user_epoch]
+
   // RESET_STORAGE_BURN: the var should be reset/updated on _beforeBurn/_afterMint and _deposit_for
-  // TODO more checks that it is only ever modified on the master chain
   mapping(uint => LockedBalance) public locked;
+
   uint public epoch;
   mapping(uint => int128) public slope_changes; // time -> signed slope change
   uint public supply;

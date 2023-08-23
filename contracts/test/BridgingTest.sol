@@ -13,7 +13,7 @@ contract BridgingTest is Test {
 
   address alice = address(1);
   address bob = address(255);
-  address charlie = address(255);
+  address charlie = address(768);
 
   uint256 aliceLockAmount = 20e18;
   uint256 aliceLockPeriod = 8 weeks;
@@ -83,24 +83,32 @@ contract BridgingTest is Test {
     ve = bridge.ve();
     token = IonicToken(ve.token());
 
-    if (!token.isBridge(address(this))) {
-      vm.prank(token.owner());
-      token.addBridge(address(this));
-    }
-
-    // mint ION to the users
-    token.mint(alice, 100e18);
-    token.mint(bob, 1000e18);
-    token.mint(charlie, 1000e18);
-
+    // enable the minting/burning/bridging of the NFTs
     if (!ve.isBridge(address(bridge))) {
       vm.startPrank(ve.owner());
       ve.addBridge(address(bridge));
       vm.stopPrank();
     }
+
+    // enable the minting of the ION token
+    if (!token.isBridge(address(this))) {
+      vm.prank(token.owner());
+      token.addBridge(address(this));
+    }
+
+    if (block.chainid == BSC_CHAPEL && token.totalSupply() == 0) {
+      // mint ION to the users
+      token.mint(alice, 100e18);
+      token.mint(bob, 1000e18);
+      token.mint(charlie, 1000e18);
+    }
   }
 
   function createUsersLocks() internal {
+    vm.label(alice, "alice");
+    vm.label(bob, "bob");
+    vm.label(charlie, "charlie");
+
     vm.startPrank(alice);
     token.approve(address(ve), 1e36);
     ve.create_lock(aliceLockAmount, aliceLockPeriod);
@@ -114,6 +122,11 @@ contract BridgingTest is Test {
     locksStartingTs = ((block.timestamp) / 2 weeks) * 2 weeks;
   }
 
+  function advanceTime() internal {
+    vm.warp(block.timestamp + 1 hours);
+    vm.roll(block.number + 1000);
+  }
+
   function testBridging() public {
     _fork(BSC_CHAPEL);
 
@@ -122,6 +135,16 @@ contract BridgingTest is Test {
     uint256 aliceNftId = ve.tokenOfOwnerByIndex(alice, 0);
     uint256 bobNftId = ve.tokenOfOwnerByIndex(bob, 0);
     assertGt(bobNftId, aliceNftId, "!nfts ids incremental");
+
+    advanceTime();
+
+    {
+      vm.prank(alice);
+      ve.delegate(charlie);
+      // TODO charlie should vote to verify
+    }
+
+    advanceTime();
 
     // start bridging alice to some other chain
     bytes memory aliceFromChapel = bridge.burn(aliceNftId);
@@ -133,7 +156,17 @@ contract BridgingTest is Test {
       assertEq(aliceChapelLockTime, 0, "chapel alice end ts");
 
       // TODO verify vars with the tag RESET_STORAGE_BURN
+
+      // TODO test ownerToNFTokenIdList/tokenOfOwnerByIndex()
+      assertEq(ve.tokenOfOwnerByIndex(alice, 0), 0, "!index reset");
+      // TODO test the delegation
+      assertEq(ve.delegates(alice), address(0), "!delegate zeroed");
+      // TODO test the user epoch and user point
+      assertEq(ve.get_last_user_slope(aliceNftId), 0, "!slope reset");
+      assertEq(ve.balanceOfNFT(aliceNftId), 0, "!balance reset");
     }
+
+    advanceTime();
 
     // also start bridging bob whose NFT was minted later than alice's
     bytes memory bobFromChapel = bridge.burn(bobNftId);
@@ -141,13 +174,19 @@ contract BridgingTest is Test {
     // fork to a subchain
     _fork(MUMBAI);
 
+    advanceTime();
+
     // complete the bridging of bob's NFT first
     bridge.mint(bob, bobNftId, bobFromChapel);
+    address shouldBeBob = ve.ownerOf(bobNftId);
+    assertEq(shouldBeBob, bob, "mumbai owner is not bob");
 
     // complete the bridging of alice
     bridge.mint(alice, aliceNftId, aliceFromChapel);
     address shouldBeAlice = ve.ownerOf(aliceNftId);
     assertEq(shouldBeAlice, alice, "mumbai owner is not alice");
+
+    advanceTime();
 
     // start bridging alice's NFT back to the master chain
     bytes memory aliceFromMumbai = bridge.burn(aliceNftId);
@@ -155,13 +194,18 @@ contract BridgingTest is Test {
     // fork back to the originating chain
     _fork(BSC_CHAPEL);
 
+    advanceTime();
+
     {
       // lock for charlie before alice had bridged back
+      token.balanceOf(charlie);
       vm.startPrank(charlie);
       token.approve(address(ve), 1e36);
-      uint256 charlieNftId = ve.create_lock(99e18, 3 weeks);
+      uint256 charlieNftId = ve.create_lock(1, 3 weeks);
       vm.stopPrank();
     }
+
+    advanceTime();
 
     // bridge back alice
     bridge.mint(alice, aliceNftId, aliceFromMumbai);
