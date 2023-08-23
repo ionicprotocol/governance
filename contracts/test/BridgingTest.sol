@@ -5,11 +5,15 @@ import "forge-std/Vm.sol";
 import "forge-std/Test.sol";
 import "./MockBridge.sol";
 import "../IonicToken.sol";
+import "../Voter.sol";
+
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract BridgingTest is Test {
   MockBridge public bridge;
   VoteEscrow public ve;
   IonicToken public token;
+  address dpa;
 
   address alice = address(1);
   address bob = address(255);
@@ -82,6 +86,7 @@ contract BridgingTest is Test {
 
     ve = bridge.ve();
     token = IonicToken(ve.token());
+    dpa = token.getProxyAdmin();
 
     // enable the minting/burning/bridging of the NFTs
     if (!ve.isBridge(address(bridge))) {
