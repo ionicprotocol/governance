@@ -11,6 +11,16 @@ contract BridgingTest is Test {
   VoteEscrow public ve;
   IonicToken public token;
 
+  address alice = address(1);
+  address bob = address(255);
+  address charlie = address(255);
+
+  uint256 aliceLockAmount = 20e18;
+  uint256 aliceLockPeriod = 8 weeks;
+  uint256 bobLockAmount = 10e18;
+  uint256 bobLockTime = 2 weeks;
+  uint256 locksStartingTs;
+
   mapping(uint128 => uint256) private forkIds;
 
   uint128 constant BSC_CHAPEL = 97;
@@ -78,9 +88,10 @@ contract BridgingTest is Test {
       token.addBridge(address(this));
     }
 
-    // mint ION to alice and bob
+    // mint ION to the users
     token.mint(alice, 100e18);
     token.mint(bob, 1000e18);
+    token.mint(charlie, 1000e18);
 
     if (!ve.isBridge(address(bridge))) {
       vm.startPrank(ve.owner());
@@ -89,59 +100,81 @@ contract BridgingTest is Test {
     }
   }
 
-  address alice = address(1);
-  address bob = address(255);
-
-  function testBridging() public {
-    _fork(BSC_CHAPEL);
-    // turn chapel persistence on
-    //vm.makePersistent(address(ve));
-
+  function createUsersLocks() internal {
     vm.startPrank(alice);
     token.approve(address(ve), 1e36);
-    uint256 aliceLockAmount = 20e18;
-    uint256 aliceNftId = ve.create_lock(aliceLockAmount, 8 weeks);
-    uint256 aliceUnlockTime = ve.locked__end(aliceNftId);
+    ve.create_lock(aliceLockAmount, aliceLockPeriod);
     vm.stopPrank();
-
-    bytes memory aliceFromChapel = bridge.burn(aliceNftId);
-
-    {
-      (int128 aliceChapelAmount, uint256 aliceChapelLockTime) = ve.locked(aliceNftId);
-      assertEq(aliceChapelAmount, int128(0), "chapel alice amount");
-      assertEq(aliceChapelLockTime, 0, "chapel alice end ts");
-    }
 
     vm.startPrank(bob);
     token.approve(address(ve), 1e36);
-    uint256 bobLockAmount = 10e18;
-    uint256 bobLockTime = 2 weeks;
-    uint256 bobNftId = ve.create_lock(bobLockAmount, bobLockTime);
+    ve.create_lock(bobLockAmount, bobLockTime);
     vm.stopPrank();
 
-    assertGt(bobNftId, aliceNftId, "not incremental");
+    locksStartingTs = ((block.timestamp) / 2 weeks) * 2 weeks;
+  }
 
+  function testBridging() public {
+    _fork(BSC_CHAPEL);
+
+    createUsersLocks();
+
+    uint256 aliceNftId = ve.tokenOfOwnerByIndex(alice, 0);
+    uint256 bobNftId = ve.tokenOfOwnerByIndex(bob, 0);
+    assertGt(bobNftId, aliceNftId, "!nfts ids incremental");
+
+    // start bridging alice to some other chain
+    bytes memory aliceFromChapel = bridge.burn(aliceNftId);
+
+    {
+      // verify that her NFT data is reset
+      (int128 aliceChapelAmount, uint256 aliceChapelLockTime) = ve.locked(aliceNftId);
+      assertEq(aliceChapelAmount, int128(0), "chapel alice amount");
+      assertEq(aliceChapelLockTime, 0, "chapel alice end ts");
+
+      // TODO verify vars with the tag RESET_STORAGE_BURN
+    }
+
+    // also start bridging bob whose NFT was minted later than alice's
     bytes memory bobFromChapel = bridge.burn(bobNftId);
 
+    // fork to a subchain
     _fork(MUMBAI);
-    // turn mumbai persistence on
-    //vm.makePersistent(address(ve));
 
+    // complete the bridging of bob's NFT first
+    bridge.mint(bob, bobNftId, bobFromChapel);
+
+    // complete the bridging of alice
     bridge.mint(alice, aliceNftId, aliceFromChapel);
     address shouldBeAlice = ve.ownerOf(aliceNftId);
     assertEq(shouldBeAlice, alice, "mumbai owner is not alice");
 
-    bridge.mint(bob, bobNftId, bobFromChapel);
-
+    // start bridging alice's NFT back to the master chain
     bytes memory aliceFromMumbai = bridge.burn(aliceNftId);
 
+    // fork back to the originating chain
     _fork(BSC_CHAPEL);
+
+    {
+      // lock for charlie before alice had bridged back
+      vm.startPrank(charlie);
+      token.approve(address(ve), 1e36);
+      uint256 charlieNftId = ve.create_lock(99e18, 3 weeks);
+      vm.stopPrank();
+    }
+
+    // bridge back alice
     bridge.mint(alice, aliceNftId, aliceFromMumbai);
     shouldBeAlice = ve.ownerOf(aliceNftId);
     assertEq(shouldBeAlice, alice, "chapel owner is not alice");
 
-    (int128 aliceAmount, uint256 aliceEndTs) = ve.locked(aliceNftId);
-    assertEq(aliceAmount, int128(uint128(aliceLockAmount)), "alice amount");
-    assertEq(aliceEndTs, aliceUnlockTime, "alice end ts");
+    {
+      // verify that alice's NFT was correctly minted back on the originating chain
+      (int128 aliceAmount, uint256 aliceEndTs) = ve.locked(aliceNftId);
+      assertEq(aliceAmount, int128(uint128(aliceLockAmount)), "alice amount");
+      assertEq(aliceEndTs, locksStartingTs + aliceLockPeriod, "alice end ts");
+
+      // TODO verify vars with the tag RESET_STORAGE_BURN
+    }
   }
 }
