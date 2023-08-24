@@ -77,9 +77,9 @@ contract BridgingTest is Test {
 
   function afterForkSetUp() internal virtual {
     if (block.chainid == BSC_CHAPEL) {
-      bridge = MockBridge(0xF6838DF98b3294E689A6741Ec21C9B07603edaC9);
+      bridge = MockBridge(0x162fE59d86ae1458DBE8F6f6B801Fb5eB5b4D4f7);
     } else if (block.chainid == MUMBAI) {
-      bridge = MockBridge(0x3B452E7A36812558C2A1a5F0d489C41Ec9374A05);
+      bridge = MockBridge(0x359CbBCefFe06Eb3E5E8eC8147FdF7De3a7B0d87);
     } else {
       bridge = new MockBridge(VoteEscrow(address(0)));
     }

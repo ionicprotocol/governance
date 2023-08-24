@@ -1,6 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/types";
 
 import { VoteEscrow } from "../typechain/VoteEscrow";
+import { IonicToken } from "../typechain/IonicToken";
 
 const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, getChainId }): Promise<void> => {
   console.log("RPC URL: ", ethers.provider.connection.url);
@@ -150,17 +151,24 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   }
 
   if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID) {
-    if (voteEscrowContract) {
-      const mockBridge = await deployments.deploy("MockBridge", {
-        contract: "MockBridge",
-        from: deployer,
-        args: [voteEscrowContract.address],
-        log: true,
-        waitConfirmations: 1,
-        skipIfAlreadyDeployed: true
-      });
-      console.log(`MockBridge deployed at ${mockBridge.address}`);
-    }
+    const mockBridge = await deployments.deploy("MockBridge", {
+      contract: "MockBridge",
+      from: deployer,
+      args: [voteEscrow.address],
+      log: true,
+      waitConfirmations: 1,
+      skipIfAlreadyDeployed: true
+    });
+    console.log(`MockBridge deployed at ${mockBridge.address}`);
+
+    let tx = await voteEscrowContract.addBridge(mockBridge.address);
+    await tx.wait();
+    console.log(`enabled the bridge to mint NFTs ${tx.hash}`);
+
+    const ionicTokenContract = (await ethers.getContractOrNull("IonicToken")) as IonicToken;
+    tx = await ionicTokenContract.addBridge(mockBridge.address);
+    await tx.wait();
+    console.log(`enabled the bridge to mint ION ${tx.hash}`);
   }
 };
 
