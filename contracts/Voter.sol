@@ -72,9 +72,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     _disableInitializers();
   }
 
-  function reinitialize(
-    address __ve
-  ) public reinitializer(2) {
+  function reinitialize(address __ve) public reinitializer(2) {
     _ve = __ve;
   }
 
