@@ -1,7 +1,7 @@
 import { DeployFunction } from "hardhat-deploy/types";
 
-import { VoteEscrow } from "../typechain/VoteEscrow";
 import { IonicToken } from "../typechain/IonicToken";
+import { VoteEscrow } from "../typechain/VoteEscrow";
 
 const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, getChainId }): Promise<void> => {
   console.log("RPC URL: ", ethers.provider.connection.url);
@@ -137,7 +137,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
       },
       owner: deployer,
       proxyContract: "OpenZeppelinTransparentProxy"
-    },
+    }
   });
   console.log(`Voter deployed at ${voter.address}`);
 
