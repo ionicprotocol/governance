@@ -152,7 +152,8 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
         from: deployer,
         args: [voteEscrowContract.address],
         log: true,
-        waitConfirmations: 1
+        waitConfirmations: 1,
+        skipIfAlreadyDeployed: true
       });
       console.log(`MockBridge deployed at ${mockBridge.address}`);
     }
