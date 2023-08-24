@@ -7,7 +7,7 @@ import "./MockBridge.sol";
 import "../IonicToken.sol";
 import "../Voter.sol";
 
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ITransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract BridgingTest is Test {
   MockBridge public bridge;
@@ -29,6 +29,9 @@ contract BridgingTest is Test {
 
   uint128 constant BSC_CHAPEL = 97;
   uint128 constant MUMBAI = 80001;
+
+  mapping(uint256 => uint256) private advancedTimestamp;
+  mapping(uint256 => uint256) private advancedBlock;
 
   function _forkAtBlock(uint128 chainid, uint256 blockNumber) internal {
     if (block.chainid != chainid) {
@@ -75,6 +78,14 @@ contract BridgingTest is Test {
     return forkIds[chainidWithOffset] - 100;
   }
 
+  function upgradeVe() internal {
+    ITransparentUpgradeableProxy proxy = ITransparentUpgradeableProxy(address(ve));
+    VoteEscrow newImpl = new VoteEscrow();
+    vm.startPrank(dpa);
+    proxy.upgradeTo(address(newImpl));
+    vm.stopPrank();
+  }
+
   function afterForkSetUp() internal virtual {
     if (block.chainid == BSC_CHAPEL) {
       bridge = MockBridge(0x162fE59d86ae1458DBE8F6f6B801Fb5eB5b4D4f7);
@@ -87,6 +98,7 @@ contract BridgingTest is Test {
     ve = bridge.ve();
     token = IonicToken(ve.token());
     dpa = token.getProxyAdmin();
+    //upgradeVe();
 
     // enable the minting/burning/bridging of the NFTs
     if (!ve.isBridge(address(bridge))) {
@@ -128,8 +140,18 @@ contract BridgingTest is Test {
   }
 
   function advanceTime() internal {
-    vm.warp(block.timestamp + 1 hours);
-    vm.roll(block.number + 1000);
+    if (advancedBlock[block.chainid] == 0) {
+      advancedBlock[block.chainid] = block.number;
+    }
+    if (advancedTimestamp[block.chainid] == 0) {
+      advancedTimestamp[block.chainid] = block.timestamp;
+    }
+
+    advancedBlock[block.chainid] += 1000;
+    advancedTimestamp[block.chainid] += 1 hours;
+
+    vm.roll(advancedBlock[block.chainid]);
+    vm.warp(advancedTimestamp[block.chainid]);
   }
 
   function testBridging() public {
