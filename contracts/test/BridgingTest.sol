@@ -98,13 +98,12 @@ contract BridgingTest is Test {
     ve = bridge.ve();
     token = IonicToken(ve.token());
     dpa = token.getProxyAdmin();
-    //upgradeVe();
+    upgradeVe();
 
     // enable the minting/burning/bridging of the NFTs
     if (!ve.isBridge(address(bridge))) {
-      vm.startPrank(ve.owner());
+      vm.prank(ve.owner());
       ve.addBridge(address(bridge));
-      vm.stopPrank();
     }
 
     // enable the minting of the ION token
@@ -182,12 +181,10 @@ contract BridgingTest is Test {
       assertEq(aliceChapelAmount, int128(0), "chapel alice amount");
       assertEq(aliceChapelLockTime, 0, "chapel alice end ts");
 
-      // TODO verify vars with the tag RESET_STORAGE_BURN
-
       // TODO test ownerToNFTokenIdList/tokenOfOwnerByIndex()
       assertEq(ve.tokenOfOwnerByIndex(alice, 0), 0, "!index reset");
       // TODO test the delegation
-      assertEq(ve.delegates(alice), address(0), "!delegate zeroed");
+      assertEq(ve.delegates(alice), alice, "!delegate reset");
       // TODO test the user epoch and user point
       assertEq(ve.get_last_user_slope(aliceNftId), 0, "!slope reset");
       assertEq(ve.balanceOfNFT(aliceNftId), 0, "!balance reset");
@@ -214,6 +211,9 @@ contract BridgingTest is Test {
     assertEq(shouldBeAlice, alice, "mumbai owner is not alice");
 
     advanceTime();
+
+    int128 aliceSlopeBeforeBurn = ve.get_last_user_slope(aliceNftId);
+    uint256 aliceBalanceBeforeBurn = ve.balanceOfNFT(aliceNftId);
 
     // start bridging alice's NFT back to the master chain
     bytes memory aliceFromMumbai = bridge.burn(aliceNftId);
@@ -245,7 +245,13 @@ contract BridgingTest is Test {
       assertEq(aliceAmount, int128(uint128(aliceLockAmount)), "alice amount");
       assertEq(aliceEndTs, locksStartingTs + aliceLockPeriod, "alice end ts");
 
-      // TODO verify vars with the tag RESET_STORAGE_BURN
+      // test ownerToNFTokenIdList/tokenOfOwnerByIndex()
+      assertEq(ve.tokenOfOwnerByIndex(alice, 0), aliceNftId, "!index reset");
+      // test the delegation
+      assertEq(ve.delegates(alice), alice, "!delegate reset");
+      // test the user epoch and user point
+      assertApproxEqRel(ve.get_last_user_slope(aliceNftId), aliceSlopeBeforeBurn, 1e16, "!slope reset");
+      assertApproxEqRel(ve.balanceOfNFT(aliceNftId), aliceBalanceBeforeBurn, 1e16, "!balance reset");
     }
   }
 }
