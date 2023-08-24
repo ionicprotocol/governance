@@ -128,11 +128,15 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
         init: {
           methodName: "initialize",
           args: [voteEscrow.address, gaugeFactory.address, bribeFactory, timer.address, voterRolesAuth.address]
+        },
+        onUpgrade: {
+          methodName: "reinitialize",
+          args: [voteEscrow.address]
         }
       },
       owner: deployer,
       proxyContract: "OpenZeppelinTransparentProxy"
-    }
+    },
   });
   console.log(`Voter deployed at ${voter.address}`);
 

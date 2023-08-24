@@ -49,8 +49,9 @@ contract BridgeManagementScript is Script, Test {
 
     {
       ProxyAdmin dpa = ProxyAdmin(dpaAddr);
-      IonicToken tokImpl = IonicToken(0xcad00b61C00F6282A125332B7f88CCa86989db35); //new VoteEscrow();
-      dpa.upgrade(ITransparentUpgradeableProxy(payable(ionicTokenAddr)), address(tokImpl));
+      address voter = 0xEBD60993642CA6e49ADa0Df517EA48D4084a05dE;
+      address impl = 0xDFE79b4F18Fa0CC0588b8732bea1B54688988c7E;
+      dpa.upgrade(ITransparentUpgradeableProxy(payable(voter)), impl);
     }
 
     //ve.setMasterChain();
