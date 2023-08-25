@@ -60,6 +60,11 @@ const config: HardhatUserConfig = {
       accounts: { mnemonic },
       chainId: 80001,
       url: OVERRIDE_RPC_URL || "https://rpc.ankr.com/polygon_mumbai"
+    },
+    arbigoerli: {
+      accounts: { mnemonic },
+      chainId: 421613,
+      url: OVERRIDE_RPC_URL || "https://api.zan.top/node/v1/arb/goerli/public	"
     }
   }
 };

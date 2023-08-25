@@ -12,10 +12,11 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   const CHAPEL_ID = 97;
   const HARDHAT_ID = 1337;
   const MUMBAI_ID = 80001;
+  const ARBI_GOERLI_ID = 80001;
   // const ARBI_ID = 42161;
 
   let lockedTokenAddress;
-  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID) {
+  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID || chainId === ARBI_GOERLI_ID) {
     const ionicToken = await deployments.deploy("IonicToken", {
       contract: "IonicToken",
       from: deployer,
