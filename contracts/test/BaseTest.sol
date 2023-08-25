@@ -11,7 +11,7 @@ import "../interfaces/IBribeFactory.sol";
 import "../factories/GaugeFactory.sol";
 import { Voter } from "../Voter.sol";
 import { VoteEscrow } from "../VoteEscrow.sol";
-import "../EpochsTimer.sol";
+import "../PeriodsUpdater.sol";
 import "../IonicToken.sol";
 
 contract IonicFlywheel is IFlywheel {
@@ -33,7 +33,7 @@ contract BaseTest is Test {
   GaugeFactory public gaugeFactory;
   Voter public voter;
   VoteEscrow public ve;
-  EpochsTimer timer;
+  PeriodsUpdater timer;
   IonicToken ionicToken;
   address proxyAdmin = address(123);
   address bridge1 = address(321);
@@ -74,9 +74,9 @@ contract BaseTest is Test {
     vm.warp(200 weeks);
 
     {
-      EpochsTimer timerImpl = new EpochsTimer();
+      PeriodsUpdater timerImpl = new PeriodsUpdater();
       TransparentUpgradeableProxy timerProxy = new TransparentUpgradeableProxy(address(timerImpl), proxyAdmin, "");
-      timer = EpochsTimer(address(timerProxy));
+      timer = PeriodsUpdater(address(timerProxy));
       timer.initialize();
       timer.update_period();
     }

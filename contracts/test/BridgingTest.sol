@@ -7,7 +7,7 @@ import "./MockBridge.sol";
 import "../IonicToken.sol";
 import "../Voter.sol";
 
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ITransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract BridgingTest is Test {
   MockBridge public bridge;
@@ -29,6 +29,9 @@ contract BridgingTest is Test {
 
   uint128 constant BSC_CHAPEL = 97;
   uint128 constant MUMBAI = 80001;
+
+  mapping(uint256 => uint256) private advancedTimestamp;
+  mapping(uint256 => uint256) private advancedBlock;
 
   function _forkAtBlock(uint128 chainid, uint256 blockNumber) internal {
     if (block.chainid != chainid) {
@@ -75,11 +78,19 @@ contract BridgingTest is Test {
     return forkIds[chainidWithOffset] - 100;
   }
 
+  function upgradeVe() internal {
+    ITransparentUpgradeableProxy proxy = ITransparentUpgradeableProxy(address(ve));
+    VoteEscrow newImpl = new VoteEscrow();
+    vm.startPrank(dpa);
+    proxy.upgradeTo(address(newImpl));
+    vm.stopPrank();
+  }
+
   function afterForkSetUp() internal virtual {
     if (block.chainid == BSC_CHAPEL) {
-      bridge = MockBridge(0xF6838DF98b3294E689A6741Ec21C9B07603edaC9);
+      bridge = MockBridge(0x162fE59d86ae1458DBE8F6f6B801Fb5eB5b4D4f7);
     } else if (block.chainid == MUMBAI) {
-      bridge = MockBridge(0x3B452E7A36812558C2A1a5F0d489C41Ec9374A05);
+      bridge = MockBridge(0x359CbBCefFe06Eb3E5E8eC8147FdF7De3a7B0d87);
     } else {
       bridge = new MockBridge(VoteEscrow(address(0)));
     }
@@ -87,12 +98,12 @@ contract BridgingTest is Test {
     ve = bridge.ve();
     token = IonicToken(ve.token());
     dpa = token.getProxyAdmin();
+    upgradeVe();
 
     // enable the minting/burning/bridging of the NFTs
     if (!ve.isBridge(address(bridge))) {
-      vm.startPrank(ve.owner());
+      vm.prank(ve.owner());
       ve.addBridge(address(bridge));
-      vm.stopPrank();
     }
 
     // enable the minting of the ION token
@@ -128,8 +139,18 @@ contract BridgingTest is Test {
   }
 
   function advanceTime() internal {
-    vm.warp(block.timestamp + 1 hours);
-    vm.roll(block.number + 1000);
+    if (advancedBlock[block.chainid] == 0) {
+      advancedBlock[block.chainid] = block.number;
+    }
+    if (advancedTimestamp[block.chainid] == 0) {
+      advancedTimestamp[block.chainid] = block.timestamp;
+    }
+
+    advancedBlock[block.chainid] += 1000;
+    advancedTimestamp[block.chainid] += 1 hours;
+
+    vm.roll(advancedBlock[block.chainid]);
+    vm.warp(advancedTimestamp[block.chainid]);
   }
 
   function testBridging() public {
@@ -160,12 +181,10 @@ contract BridgingTest is Test {
       assertEq(aliceChapelAmount, int128(0), "chapel alice amount");
       assertEq(aliceChapelLockTime, 0, "chapel alice end ts");
 
-      // TODO verify vars with the tag RESET_STORAGE_BURN
-
       // TODO test ownerToNFTokenIdList/tokenOfOwnerByIndex()
       assertEq(ve.tokenOfOwnerByIndex(alice, 0), 0, "!index reset");
       // TODO test the delegation
-      assertEq(ve.delegates(alice), address(0), "!delegate zeroed");
+      assertEq(ve.delegates(alice), alice, "!delegate reset");
       // TODO test the user epoch and user point
       assertEq(ve.get_last_user_slope(aliceNftId), 0, "!slope reset");
       assertEq(ve.balanceOfNFT(aliceNftId), 0, "!balance reset");
@@ -192,6 +211,9 @@ contract BridgingTest is Test {
     assertEq(shouldBeAlice, alice, "mumbai owner is not alice");
 
     advanceTime();
+
+    int128 aliceSlopeBeforeBurn = ve.get_last_user_slope(aliceNftId);
+    uint256 aliceBalanceBeforeBurn = ve.balanceOfNFT(aliceNftId);
 
     // start bridging alice's NFT back to the master chain
     bytes memory aliceFromMumbai = bridge.burn(aliceNftId);
@@ -223,7 +245,13 @@ contract BridgingTest is Test {
       assertEq(aliceAmount, int128(uint128(aliceLockAmount)), "alice amount");
       assertEq(aliceEndTs, locksStartingTs + aliceLockPeriod, "alice end ts");
 
-      // TODO verify vars with the tag RESET_STORAGE_BURN
+      // test ownerToNFTokenIdList/tokenOfOwnerByIndex()
+      assertEq(ve.tokenOfOwnerByIndex(alice, 0), aliceNftId, "!index reset");
+      // test the delegation
+      assertEq(ve.delegates(alice), alice, "!delegate reset");
+      // test the user epoch and user point
+      assertApproxEqRel(ve.get_last_user_slope(aliceNftId), aliceSlopeBeforeBurn, 1e16, "!slope reset");
+      assertApproxEqRel(ve.balanceOfNFT(aliceNftId), aliceBalanceBeforeBurn, 1e16, "!balance reset");
     }
   }
 }

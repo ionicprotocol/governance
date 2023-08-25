@@ -320,6 +320,9 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     // Remove token
     _removeTokenFromOwnerList(owner, _tokenId);
 
+    // TODO
+    _delegate(_ownerOf(_tokenId), address(0));
+
     // TODO use OZ ERC721Upgradeable or not?
     super._burn(_tokenId);
     //emit Transfer(owner, address(0), _tokenId);
@@ -1104,14 +1107,16 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   }
 
   // RESET_STORAGE_BURN: delegation is reset on _burn/_moveTokenDelegates(..., address(0), ...)
-  function _delegate(address delegator, address delegatee) internal onlyOnMasterChain {
-    /// @notice differs from `_delegate()` in `Comp.sol` to use `delegates` override method to simulate auto-delegation
-    address currentDelegate = delegates(delegator);
+  function _delegate(address delegator, address delegatee) internal {
+    if (block.chainid == masterChainId) {
+      /// @notice differs from `_delegate()` in `Comp.sol` to use `delegates` override method to simulate auto-delegation
+      address currentDelegate = delegates(delegator);
 
-    _delegates[delegator] = delegatee;
+      _delegates[delegator] = delegatee;
 
-    emit DelegateChanged(delegator, currentDelegate, delegatee);
-    _moveAllDelegates(delegator, currentDelegate, delegatee);
+      emit DelegateChanged(delegator, currentDelegate, delegatee);
+      _moveAllDelegates(delegator, currentDelegate, delegatee);
+    }
   }
 
   /**
