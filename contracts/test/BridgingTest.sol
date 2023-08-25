@@ -28,7 +28,7 @@ contract BridgingTest is Test {
   mapping(uint128 => uint256) private forkIds;
 
   uint128 constant BSC_CHAPEL = 97;
-  uint128 constant MUMBAI = 80001;
+  uint128 constant ARBI_GOERLI = 421613;
 
   mapping(uint256 => uint256) private advancedTimestamp;
   mapping(uint256 => uint256) private advancedBlock;
@@ -57,8 +57,8 @@ contract BridgingTest is Test {
     if (forkIds[chainid] == 0) {
       if (chainid == BSC_CHAPEL) {
         forkIds[chainid] = vm.createFork(vm.rpcUrl("chapel_rpc")) + 100;
-      } else if (chainid == MUMBAI) {
-        forkIds[chainid] = vm.createFork(vm.rpcUrl("mumbai_rpc")) + 100;
+      } else if (chainid == ARBI_GOERLI) {
+        forkIds[chainid] = vm.createFork(vm.rpcUrl("arbi_goerli_rpc")) + 100;
       }
     }
 
@@ -71,8 +71,8 @@ contract BridgingTest is Test {
     if (forkIds[chainidWithOffset] == 0) {
       if (chainid == BSC_CHAPEL) {
         forkIds[chainidWithOffset] = vm.createFork(vm.rpcUrl("chapel_rpc_archive")) + 100;
-      } else if (chainid == MUMBAI) {
-        forkIds[chainidWithOffset] = vm.createFork(vm.rpcUrl("mumbai_rpc_archive")) + 100;
+      } else if (chainid == ARBI_GOERLI) {
+        forkIds[chainidWithOffset] = vm.createFork(vm.rpcUrl("arbi_goerli_rpc_archive")) + 100;
       }
     }
     return forkIds[chainidWithOffset] - 100;
@@ -89,8 +89,8 @@ contract BridgingTest is Test {
   function afterForkSetUp() internal virtual {
     if (block.chainid == BSC_CHAPEL) {
       bridge = MockBridge(0x162fE59d86ae1458DBE8F6f6B801Fb5eB5b4D4f7);
-    } else if (block.chainid == MUMBAI) {
-      bridge = MockBridge(0x359CbBCefFe06Eb3E5E8eC8147FdF7De3a7B0d87);
+    } else if (block.chainid == ARBI_GOERLI) {
+      bridge = MockBridge(0x5060B9498eE5a1002421A57621fC86c0127a6deb);
     } else {
       bridge = new MockBridge(VoteEscrow(address(0)));
     }
@@ -196,19 +196,19 @@ contract BridgingTest is Test {
     bytes memory bobFromChapel = bridge.burn(bobNftId);
 
     // fork to a subchain
-    _fork(MUMBAI);
+    _fork(ARBI_GOERLI);
 
     advanceTime();
 
     // complete the bridging of bob's NFT first
     bridge.mint(bob, bobNftId, bobFromChapel);
     address shouldBeBob = ve.ownerOf(bobNftId);
-    assertEq(shouldBeBob, bob, "mumbai owner is not bob");
+    assertEq(shouldBeBob, bob, "arbi goerli owner is not bob");
 
     // complete the bridging of alice
     bridge.mint(alice, aliceNftId, aliceFromChapel);
     address shouldBeAlice = ve.ownerOf(aliceNftId);
-    assertEq(shouldBeAlice, alice, "mumbai owner is not alice");
+    assertEq(shouldBeAlice, alice, "arbi goerli owner is not alice");
 
     advanceTime();
 
@@ -216,7 +216,7 @@ contract BridgingTest is Test {
     uint256 aliceBalanceBeforeBurn = ve.balanceOfNFT(aliceNftId);
 
     // start bridging alice's NFT back to the master chain
-    bytes memory aliceFromMumbai = bridge.burn(aliceNftId);
+    bytes memory aliceFromAbriGoerli = bridge.burn(aliceNftId);
 
     // fork back to the originating chain
     _fork(BSC_CHAPEL);
@@ -235,7 +235,7 @@ contract BridgingTest is Test {
     advanceTime();
 
     // bridge back alice
-    bridge.mint(alice, aliceNftId, aliceFromMumbai);
+    bridge.mint(alice, aliceNftId, aliceFromAbriGoerli);
     shouldBeAlice = ve.ownerOf(aliceNftId);
     assertEq(shouldBeAlice, alice, "chapel owner is not alice");
 

@@ -151,7 +151,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
     console.log(`set the voter in the escrow with tx ${tx.hash}`);
   }
 
-  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID) {
+  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID || chainId === ARBI_GOERLI_ID) {
     const mockBridge = await deployments.deploy("MockBridge", {
       contract: "MockBridge",
       from: deployer,

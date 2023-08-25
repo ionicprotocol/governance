@@ -7,6 +7,8 @@ libs = ["lib"]
 [rpc_endpoints]
 chapel_rpc = "${CHAPEL_RPC}"
 mumbai_rpc = "${MUMBAI_RPC}"
+arbi_goerli_rpc = "${ARBI_GOERLI_RPC}"
 
 chapel_rpc_archive = "${CHAPEL_RPC}"
 mumbai_rpc_archive = "${MUMBAI_RPC}"
+arbi_goerli_rpc_archive = "${ARBI_GOERLI_RPC}"
