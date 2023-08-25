@@ -13,7 +13,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   const CHAPEL_ID = 97;
   const HARDHAT_ID = 1337;
   const MUMBAI_ID = 80001;
-  const ARBI_GOERLI_ID = 80001;
+  const ARBI_GOERLI_ID = 421613;
   // const ARBI_ID = 42161;
 
   let lockedTokenAddress;

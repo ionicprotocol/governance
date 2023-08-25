@@ -35,6 +35,7 @@
     "typechain": "echo '> Creating typechain types...'; [ ! -d ./typechain ] && typechain --target ethers-v5 --out-dir './typechain' './out/**/*.json' --show-stack-traces",
     "deploy:localhost": "hardhat --network localhost deploy --tags prod --no-compile",
     "deploy:chapel": "hardhat --network chapel deploy --tags prod --no-compile",
+    "deploy:arbigoerli": "hardhat --network arbigoerli deploy --tags prod --no-compile",
     "deploy:mumbai": "hardhat --network mumbai deploy --tags prod --no-compile"
   },
   "files": [

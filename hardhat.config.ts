@@ -64,7 +64,7 @@ const config: HardhatUserConfig = {
     arbigoerli: {
       accounts: { mnemonic },
       chainId: 421613,
-      url: OVERRIDE_RPC_URL || "https://api.zan.top/node/v1/arb/goerli/public	"
+      url: OVERRIDE_RPC_URL || "https://endpoints.omniatech.io/v1/arbitrum/goerli/public"
     }
   }
 };
