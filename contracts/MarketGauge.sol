@@ -33,32 +33,6 @@ contract MarketGauge is Gauge {
     flywheel.claimRewards(_user);
   }
 
-  //  function claimFees() external {
-  //    claimMarketFees();
-  //  }
-  //
-  //  function claimMarketFees() public nonReentrant returns (uint256) {
-  //    return abi.decode(_claimFees(), (uint256));
-  //  }
-  //
-  //  function _claimFees() internal override returns (bytes memory) {
-  //    uint256 fees = IMarket(target).totalAdminFees();
-  //
-  //    if (fees > 0) {
-  //      IMarket(target)._withdrawAdminFees(fees);
-  //      address underlying = IMarket(target).underlying();
-  //
-  //      if (fees > 0) {
-  //        // assuming that the admin is the gauge
-  //        IERC20(underlying).approve(internal_bribe, fees);
-  //        IBribe(internal_bribe).notifyRewardAmount(underlying, fees);
-  //      }
-  //      emit ClaimFees(msg.sender, fees);
-  //    }
-  //
-  //    return abi.encode(fees);
-  //  }
-
   function setFlywheel(IFlywheel _flywheel) external onlyOwner {
     flywheel = _flywheel;
   }
