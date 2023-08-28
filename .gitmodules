@@ -10,3 +10,6 @@
 [submodule "lib/chain-abstraction-integration"]
 	path = lib/chain-abstraction-integration
 	url = https://github.com/connext/chain-abstraction-integration
+[submodule "lib/connext-interfaces"]
+	path = lib/connext-interfaces
+	url = https://github.com/connext/interfaces
