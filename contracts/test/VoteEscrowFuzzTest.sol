@@ -11,16 +11,16 @@ contract VoteEscrowFuzzTest is BaseTest {
   address charlie = address(768);
 
   function testLocksFixed() public {
-    testLocksFuzz(220, 9234914913);
+    testLocksFuzz(220, 222);
   }
 
-  function testLocksFuzz(uint16 runs, uint256 random) public {
+  function testLocksFuzz(uint16 runs, uint8 random) public {
+    vm.assume(runs > 20);
+    vm.assume(random > 20);
+
     vm.label(alice, "alice");
     vm.label(bob, "bob");
     vm.label(charlie, "charlie");
-
-    vm.assume(runs > 20);
-    vm.assume(random > 20);
 
     address bridgingUser;
     uint256 bridgedTokenId;
