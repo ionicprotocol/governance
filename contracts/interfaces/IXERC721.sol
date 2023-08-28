@@ -1,3 +1,5 @@
+pragma solidity ^0.8.0;
+
 interface IXERC721 {
     function addBridge(address _bridge) external;
     function removeBridge(address _bridge) external;

@@ -29,12 +29,12 @@ contract ConnextSource is IVeNFTBridger, Ownable {
         if (target == address(0)) {
             revert NO_TARGET(toChain);
         }
-        VE_TOKEN.burn(tokenId);
-        bytes memory _callData = abi.encode(tokenId, to);
+        bytes memory metadata = VE_TOKEN.burn(tokenId);
+        bytes memory _callData = abi.encode(tokenId, to, metadata);
         CONNEXT.xcall(getDomainFromChain(toChain), target, address(0), msg.sender, 0, 0, _callData);
     }
 
-    function getDomainFromChain(uint32 chain) public pure returns (uint256) {
+    function getDomainFromChain(uint32 chain) public pure returns (uint32) {
         // mainnets
         if (chain == 1) {
             return 6648936;

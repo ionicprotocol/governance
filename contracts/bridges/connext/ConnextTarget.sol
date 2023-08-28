@@ -7,7 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {IXERC721} from "../../interfaces/IXERC721.sol";
 
-contract ConnextTarget is IXReceiver {
+contract ConnextTarget is IXReceiver, Ownable {
     IXERC721 public immutable VE_TOKEN;
     IConnext public immutable CONNEXT;
     mapping(uint32 => address) public sources;
@@ -47,8 +47,8 @@ contract ConnextTarget is IXReceiver {
         uint32 _origin,
         bytes memory _callData
     ) external onlyOrigin(_originSender, _origin) returns (bytes memory) {
-        (uint256 tokenId, address to) = abi.decode(_callData, (uint256, address));
-        VE_TOKEN.mint(to, tokenId);
+        (uint256 tokenId, address to, bytes memory metadata) = abi.decode(_callData, (uint256, address, bytes));
+        VE_TOKEN.mint(to, tokenId, metadata);
         return "";
     }
 }
