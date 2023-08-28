@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import "./interfaces/IBribe.sol";
 import "./interfaces/IGauge.sol";
 
 interface IRewarder {
@@ -27,8 +26,6 @@ abstract contract Gauge is ReentrancyGuardUpgradeable, OwnableUpgradeable, IGaug
   // TODO unused?
   address public ve;
   address public voter;
-  address public internal_bribe;
-  address public external_bribe;
 
   event RewardAdded(uint256 reward);
   event Deposit(address indexed user, uint256 amount);
@@ -57,9 +54,7 @@ abstract contract Gauge is ReentrancyGuardUpgradeable, OwnableUpgradeable, IGaug
     address _rewardToken,
     address _ve,
     address _target,
-    address _voter,
-    address _internal_bribe,
-    address _external_bribe
+    address _voter
   ) internal onlyInitializing {
     __Ownable_init();
     __ReentrancyGuard_init();
@@ -68,9 +63,6 @@ abstract contract Gauge is ReentrancyGuardUpgradeable, OwnableUpgradeable, IGaug
     ve = _ve; // vested
     target = _target; // gauge target address
     voter = _voter; // distro address (voter)
-
-    internal_bribe = _internal_bribe; // lp fees goes here
-    external_bribe = _external_bribe; // bribe fees goes here
 
     emergency = false; // emergency flag
   }
@@ -90,12 +82,6 @@ abstract contract Gauge is ReentrancyGuardUpgradeable, OwnableUpgradeable, IGaug
     voter = _voter;
   }
 
-  ///@notice set new internal bribe contract (where to send fees)
-  function setInternalBribe(address _int) external onlyOwner {
-    require(_int >= address(0), "zero");
-    internal_bribe = _int;
-  }
-
   function activateEmergencyMode() external onlyOwner {
     require(emergency == false, "emergency");
     emergency = true;
@@ -111,6 +97,4 @@ abstract contract Gauge is ReentrancyGuardUpgradeable, OwnableUpgradeable, IGaug
 
   /// @dev Receive rewards from voter
   function notifyRewardAmount(address token, uint256 reward) external virtual;
-
-  function _claimFees() internal virtual returns (bytes memory);
 }
