@@ -14,7 +14,7 @@ contract VoteEscrowFuzzTest is BaseTest {
     testLocksFuzz(220, 9234914913);
   }
 
-  function testLocksFuzz(uint8 runs, uint256 random) public {
+  function testLocksFuzz(uint16 runs, uint256 random) public {
     vm.label(alice, "alice");
     vm.label(bob, "bob");
     vm.label(charlie, "charlie");
