@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./interfaces/IBribe.sol";
-import "./interfaces/IBribeFactory.sol";
 import "./interfaces/IGauge.sol";
 import "./interfaces/IGaugeFactory.sol";
 import "./interfaces/IERC20.sol";
@@ -20,7 +18,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   address internal base; // $ion token
   address public gaugeFactory; // gauge factory
   address[] public gaugeFactories; // array with all the gauge factories
-  address public bribeFactory; // bribe factory (internal and external)
   VoterRolesAuthority public permissionRegistry; // registry to check accesses
   address[] public targets; // all markets/pools viable for incentives
 
@@ -34,8 +31,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   mapping(address => address) public gauges; // market/pool     => gauge
   mapping(address => uint) public gaugesDistributionTimestamp; // gauge    => last Distribution Time
   mapping(address => address) public targetForGauge; // gauge    => market/pool
-  mapping(address => address) public internal_bribes; // gauge    => internal bribe (only fees)
-  mapping(address => address) public external_bribes; // gauge    => external bribe (real bribes)
   mapping(uint => mapping(address => uint256)) public votes; // nft      => market/pool     => votes
   mapping(uint => address[]) public targetVote; // nft      => markets/pools
   mapping(uint => mapping(address => uint)) internal weightsPerEpoch; // timestamp => market/pool => weights
@@ -50,15 +45,11 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   event PairGaugeCreated(
     address indexed gauge,
     address creator,
-    address internal_bribe,
-    address indexed external_bribe,
     address indexed market
   );
   event MarketGaugeCreated(
     address indexed gauge,
     address creator,
-    address internal_bribe,
-    address indexed external_bribe,
     address indexed target
   );
   event GaugeKilled(address indexed gauge);
@@ -79,7 +70,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   function initialize(
     address __ve,
     address _gauges,
-    address _bribes,
     address _minter,
     VoterRolesAuthority _permissionsRegistry
   ) public initializer {
@@ -93,7 +83,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     gaugeFactories.push(_gauges);
     isGaugeFactory[_gauges] = true;
 
-    bribeFactory = _bribes;
     minter = _minter;
     permissionRegistry = _permissionsRegistry;
 
@@ -140,11 +129,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     voteDelay = _delay;
   }
 
-  /// @notice Set a new Bribe Factory
-  function setBribeFactory(address _bribeFactory) external VoterAdmin {
-    bribeFactory = _bribeFactory;
-  }
-
   /// @notice Set a new Gauge Factory
   function setGaugeFactory(address _gaugeFactory) external VoterAdmin {
     gaugeFactory = _gaugeFactory;
@@ -153,25 +137,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   /// @notice Set a new PermissionRegistry
   function setPermissionsRegistry(VoterRolesAuthority _permissionRegistry) external VoterAdmin {
     permissionRegistry = _permissionRegistry;
-  }
-
-  /// @notice Set a new bribes for a given gauge
-  function setNewBribes(address _gauge, address _internal, address _external) external VoterAdmin {
-    require(isGauge[_gauge], "not a gauge");
-    internal_bribes[_gauge] = _internal;
-    external_bribes[_gauge] = _external;
-  }
-
-  /// @notice Set a new internal bribe for a given gauge
-  function setInternalBribeFor(address _gauge, address _internal) external VoterAdmin {
-    require(isGauge[_gauge], "not a gauge");
-    internal_bribes[_gauge] = _internal;
-  }
-
-  /// @notice Set a new External bribe for a given gauge
-  function setExternalBribeFor(address _gauge, address _external) external VoterAdmin {
-    require(isGauge[_gauge], "not a gauge");
-    external_bribes[_gauge] = _external;
   }
 
   /// @notice Increase gauge approvals if max is type(uint).max is reached    [very long run could happen]
@@ -349,36 +314,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
   }
 
-  /// @notice claim bribes rewards given a TokenID
-  function claimBribes(address[] memory _bribes, address[][] memory _tokens, uint _tokenId) external {
-    require(IVoteEscrow(_ve).isApprovedOrOwner(msg.sender, _tokenId), "not owner or approved");
-    for (uint i = 0; i < _bribes.length; i++) {
-      IBribe(_bribes[i]).getRewardForOwner(_tokenId, _tokens[i]);
-    }
-  }
-
-  /// @notice claim fees rewards given a TokenID
-  function claimFees(address[] memory _fees, address[][] memory _tokens, uint _tokenId) external {
-    require(IVoteEscrow(_ve).isApprovedOrOwner(msg.sender, _tokenId), "not owner or approved");
-    for (uint i = 0; i < _fees.length; i++) {
-      IBribe(_fees[i]).getRewardForOwner(_tokenId, _tokens[i]);
-    }
-  }
-
-  /// @notice claim bribes rewards given an address
-  function claimBribes(address[] memory _bribes, address[][] memory _tokens) external {
-    for (uint i = 0; i < _bribes.length; i++) {
-      IBribe(_bribes[i]).getRewardForAddress(msg.sender, _tokens[i]);
-    }
-  }
-
-  /// @notice claim fees rewards given an address
-  function claimFees(address[] memory _bribes, address[][] memory _tokens) external {
-    for (uint i = 0; i < _bribes.length; i++) {
-      IBribe(_bribes[i]).getRewardForAddress(msg.sender, _tokens[i]);
-    }
-  }
-
   /// @notice check if user can vote
   function _voteDelay(uint _tokenId) internal view {
     require(block.timestamp > lastVoted[_tokenId] + voteDelay, "ERR: VOTE_DELAY");
@@ -394,57 +329,53 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   /// @notice create multiple gauges
   function createPairGauges(
     address[] memory _targets
-  ) external nonReentrant returns (address[] memory, address[] memory, address[] memory) {
+  ) external nonReentrant returns (address[] memory) {
     require(_targets.length <= 10, "max 10");
     address[] memory _gauge = new address[](_targets.length);
-    address[] memory _int = new address[](_targets.length);
-    address[] memory _ext = new address[](_targets.length);
 
     uint i = 0;
     for (i; i < _targets.length; i++) {
-      (_gauge[i], _int[i], _ext[i]) = _createPairGauge(_targets[i]);
+      _gauge[i] = _createPairGauge(_targets[i]);
     }
-    return (_gauge, _int, _ext);
+    return _gauge;
   }
 
   /// @notice create multiple gauges
   function createMarketGauges(
     address[] memory _targets,
     address[] memory _flywheels
-  ) external nonReentrant returns (address[] memory, address[] memory, address[] memory) {
+  ) external nonReentrant returns (address[] memory) {
     require(_targets.length == _flywheels.length, "len diff");
     require(_targets.length <= 10, "max 10");
     address[] memory _gauge = new address[](_targets.length);
-    address[] memory _int = new address[](_targets.length);
-    address[] memory _ext = new address[](_targets.length);
 
     uint i = 0;
     for (i; i < _targets.length; i++) {
-      (_gauge[i], _int[i], _ext[i]) = _createMarketGauge(_targets[i], _flywheels[i]);
+      _gauge[i] = _createMarketGauge(_targets[i], _flywheels[i]);
     }
-    return (_gauge, _int, _ext);
+    return _gauge;
   }
 
   /// @notice create a gauge
   function createPairGauge(
     address _target
-  ) external nonReentrant returns (address _gauge, address _internal_bribe, address _external_bribe) {
-    (_gauge, _internal_bribe, _external_bribe) = _createPairGauge(_target);
+  ) external nonReentrant returns (address _gauge) {
+    _gauge = _createPairGauge(_target);
   }
 
   /// @notice create a gauge
   function createMarketGauge(
     address _target,
     address _flywheel
-  ) external nonReentrant returns (address _gauge, address _internal_bribe, address _external_bribe) {
-    (_gauge, _internal_bribe, _external_bribe) = _createMarketGauge(_target, _flywheel);
+  ) external nonReentrant returns (address _gauge) {
+    _gauge = _createMarketGauge(_target, _flywheel);
   }
 
   /// @notice create a gauge
   /// @param  _target  gauge target address
   function _createPairGauge(
     address _target
-  ) internal VoterAdmin returns (address _gauge, address _internal_bribe, address _external_bribe) {
+  ) internal VoterAdmin returns (address _gauge) {
     require(gauges[_target] == address(0x0), "!exists");
     address _gaugeFactory = gaugeFactories[0];
     require(_gaugeFactory != address(0), "zero addr gauge f");
@@ -457,31 +388,18 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
       revert("TODO verify that the target is an Ionic market in case the caller is not an admin");
     }
 
-    if (address(bribeFactory) != address(0)) {
-      // create internal and external bribe
-      string memory _type = string.concat("Ionic market fees: ", IERC20(_target).symbol());
-      _internal_bribe = IBribeFactory(bribeFactory).createBribe(owner(), _target, _type);
-
-      _type = string.concat("Ionic Bribes: ", IERC20(_target).symbol());
-      _external_bribe = IBribeFactory(bribeFactory).createBribe(owner(), _target, _type);
-    }
-
     // create gauge
     _gauge = IGaugeFactory(_gaugeFactory).createPairGauge(
       base,
       _ve,
       _target,
-      address(this),
-      _internal_bribe,
-      _external_bribe
+      address(this)
     );
 
     // approve spending for $ion - used in IGauge(_gauge).notifyRewardAmount()
     IERC20(base).approve(_gauge, type(uint).max);
 
     // save data
-    internal_bribes[_gauge] = _internal_bribe;
-    external_bribes[_gauge] = _external_bribe;
     gauges[_target] = _gauge;
     targetForGauge[_gauge] = _target;
     isGauge[_gauge] = true;
@@ -491,7 +409,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     // update index
     supplyIndex[_gauge] = index; // new users are set to the default global state
 
-    emit PairGaugeCreated(_gauge, msg.sender, _internal_bribe, _external_bribe, _target);
+    emit PairGaugeCreated(_gauge, msg.sender, _target);
   }
 
   /// @notice create a gauge
@@ -499,7 +417,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   function _createMarketGauge(
     address _target,
     address _flywheel
-  ) internal VoterAdmin returns (address, address, address) {
+  ) internal VoterAdmin returns (address) {
     require(gauges[_target] == address(0x0), "!exists");
     address _gaugeFactory = gaugeFactories[0];
     require(_gaugeFactory != address(0), "zero addr gauge f");
@@ -510,26 +428,19 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
       revert("TODO verify that the target is an Ionic market in case the caller is not an admin");
     }
 
-    address _internal_bribe;
-    address _external_bribe;
-
     // create gauge
     address _gauge = IGaugeFactory(_gaugeFactory).createMarketGauge(
       _flywheel,
       base,
       _ve,
       _target,
-      address(this),
-      _internal_bribe,
-      _external_bribe
+      address(this)
     );
 
     // approve spending for $ion - used in IGauge(_gauge).notifyRewardAmount()
     IERC20(base).approve(_gauge, type(uint).max);
 
     // save data
-    internal_bribes[_gauge] = _internal_bribe;
-    external_bribes[_gauge] = _external_bribe;
     gauges[_target] = _gauge;
     targetForGauge[_gauge] = _target;
     isGauge[_gauge] = true;
@@ -539,9 +450,9 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     // update index
     supplyIndex[_gauge] = index; // new users are set to the default global state
 
-    emit MarketGaugeCreated(_gauge, msg.sender, _internal_bribe, _external_bribe, _target);
+    emit MarketGaugeCreated(_gauge, msg.sender, _target);
 
-    return (_gauge, _internal_bribe, _external_bribe);
+    return _gauge;
   }
 
   /* -----------------------------------------------------------------------------
@@ -619,17 +530,6 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     emit NotifyReward(msg.sender, base, amount);
-  }
-
-  /// @notice distribute the LP Fees to the internal bribes
-  /// @param  _gauges  gauge address where to claim the fees
-  /// @dev    the gauge is the owner of the LPs so it has to claim
-  function distributeFees(address[] memory _gauges) external {
-    for (uint i = 0; i < _gauges.length; i++) {
-      if (isGauge[_gauges[i]] && isAlive[_gauges[i]]) {
-        IGauge(_gauges[i]).claimFees();
-      }
-    }
   }
 
   /// @notice Distribute the emission for ALL gauges
