@@ -36,7 +36,7 @@ contract BaseTest is Test {
   PeriodsUpdater timer;
   IonicToken ionicToken;
   address proxyAdmin = address(123);
-  address bridge1 = address(321);
+  address public bridge1 = address(321);
 
   function setUp() public {
     ionicToken = new IonicToken();

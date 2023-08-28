@@ -94,7 +94,6 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
   mapping(uint => Point[1000000000]) public user_point_history; // user -> Point[user_epoch]
   // RESET_STORAGE_BURN: the var should be reset/updated on _beforeBurn/_afterMint and _deposit_for
-  // TODO more checks that it is only ever modified on the master chain
   mapping(uint => LockedBalance) public locked;
 
   // TODO why is epoch incremented in the checkpoint fn?
@@ -201,16 +200,6 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   function setTeam(address _team) external {
     require(msg.sender == team, "!team");
     team = _team;
-  }
-
-  // TODO temp fns, remove
-  function setToken(address _token) external onlyOwner {
-    token = _token;
-  }
-
-  // TODO temp fns, remove
-  function setMasterChain() external onlyOwner {
-    masterChainId = block.chainid == 97 ? 97 : ARBITRUM_ONE;
   }
 
   /// @dev Returns current token URI metadata
@@ -511,16 +500,15 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @param _tokenId NFT that holds lock
   /// @param _value Amount to deposit
   /// @param unlock_time New time when to unlock the tokens, or 0 if unchanged
-  /// @param locked_balance Previous locked amount / timestamp
+  /// @param _locked Previous locked amount / timestamp
   /// @param deposit_type The type of deposit
   function _deposit_for(
     uint _tokenId,
     uint _value,
     uint unlock_time,
-    LockedBalance memory locked_balance,
+    LockedBalance memory _locked,
     DepositType deposit_type
   ) internal onlyOnMasterChain {
-    LockedBalance memory _locked = locked_balance;
     uint supply_before = supply;
 
     supply = supply_before + _value;
