@@ -26,7 +26,6 @@ contract VoteEscrowFuzzTest is BaseTest {
     bytes memory bridgingMetadata;
 
     for (uint256 i = 0; i < runs; i++) {
-
       address minter;
       if (i % 3 == 0) {
         minter = alice;
@@ -47,7 +46,8 @@ contract VoteEscrowFuzzTest is BaseTest {
         uint256 minterNfts = ve.balanceOf(minter);
         emit log_named_uint("minter nfts", minterNfts);
         if (minterNfts > 2) {
-          if (i > 15 && i % 4 == 0) {
+          uint256 randi = random - i;
+          if (i > 15 && randi % 4 == 0) {
             vm.stopPrank();
             vm.startPrank(bridge1);
 
@@ -65,9 +65,8 @@ contract VoteEscrowFuzzTest is BaseTest {
             }
             vm.stopPrank();
             vm.startPrank(minter);
-          }
-          else {
-            if (i > 6 && i % 3 == 0) {
+          } else {
+            if (i > 6 && randi % 3 == 0) {
               uint256 nft2 = ve.tokenOfOwnerByIndex(minter, 2);
               if (nft2 != 0 && block.timestamp < ve.locked__end(nft2)) {
                 uint256 nft2Balance = ve.balanceOfNFT(nft2);
@@ -77,7 +76,7 @@ contract VoteEscrowFuzzTest is BaseTest {
                 ve.split(asArray(half0, half1), nft2);
               }
             }
-            if (i > 10 && i % 5 == 0) {
+            if (i > 10 && randi % 5 == 0) {
               uint256 nft0 = ve.tokenOfOwnerByIndex(minter, 0);
               uint256 nft1 = ve.tokenOfOwnerByIndex(minter, 1);
               uint256 nft2 = ve.tokenOfOwnerByIndex(minter, 2);
@@ -89,7 +88,7 @@ contract VoteEscrowFuzzTest is BaseTest {
                 ve.merge(nft1, nft2);
               }
             }
-            if (i > 14 && i % 7 == 0) {
+            if (i > 14 && randi % 7 == 0) {
               uint256 nft1 = ve.tokenOfOwnerByIndex(minter, 1);
               if (nft1 != 0 && block.timestamp > ve.locked__end(nft1)) {
                 emit log_named_uint("withdrawing", nft1);
