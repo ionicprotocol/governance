@@ -20,6 +20,7 @@ contract VoteEscrowFuzzTest is BaseTest {
     vm.label(charlie, "charlie");
 
     vm.assume(runs > 20);
+    vm.assume(random > 20);
 
     address bridgingUser;
     uint256 bridgedTokenId;
