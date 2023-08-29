@@ -59,7 +59,12 @@ const config: HardhatUserConfig = {
     mumbai: {
       accounts: { mnemonic },
       chainId: 80001,
-      url: OVERRIDE_RPC_URL || "https://rpc-mumbai.maticvigil.com"
+      url: OVERRIDE_RPC_URL || "https://rpc.ankr.com/polygon_mumbai"
+    },
+    arbigoerli: {
+      accounts: { mnemonic },
+      chainId: 421613,
+      url: OVERRIDE_RPC_URL || "https://endpoints.omniatech.io/v1/arbitrum/goerli/public"
     }
   }
 };

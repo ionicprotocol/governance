@@ -7,11 +7,10 @@ import "forge-std/Test.sol";
 import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ERC20 } from "solmate/tokens/ERC20.sol";
 
-import "../interfaces/IBribeFactory.sol";
 import "../factories/GaugeFactory.sol";
 import { Voter } from "../Voter.sol";
 import { VoteEscrow } from "../VoteEscrow.sol";
-import "../EpochsTimer.sol";
+import "../PeriodsUpdater.sol";
 import "../IonicToken.sol";
 
 contract IonicFlywheel is IFlywheel {
@@ -33,10 +32,10 @@ contract BaseTest is Test {
   GaugeFactory public gaugeFactory;
   Voter public voter;
   VoteEscrow public ve;
-  EpochsTimer timer;
+  PeriodsUpdater timer;
   IonicToken ionicToken;
   address proxyAdmin = address(123);
-  address bridge1 = address(321);
+  address public bridge1 = address(321);
 
   function setUp() public {
     ionicToken = new IonicToken();
@@ -74,20 +73,17 @@ contract BaseTest is Test {
     vm.warp(200 weeks);
 
     {
-      EpochsTimer timerImpl = new EpochsTimer();
+      PeriodsUpdater timerImpl = new PeriodsUpdater();
       TransparentUpgradeableProxy timerProxy = new TransparentUpgradeableProxy(address(timerImpl), proxyAdmin, "");
-      timer = EpochsTimer(address(timerProxy));
+      timer = PeriodsUpdater(address(timerProxy));
       timer.initialize();
       timer.update_period();
     }
 
-    // TODO
-    IBribeFactory bribeFactory = IBribeFactory(address(0));
-
     Voter voterImpl = new Voter();
     TransparentUpgradeableProxy voterProxy = new TransparentUpgradeableProxy(address(voterImpl), proxyAdmin, "");
     voter = Voter(address(voterProxy));
-    voter.initialize(address(ve), address(gaugeFactory), address(bribeFactory), address(timer), voterRolesAuth);
+    voter.initialize(address(ve), address(gaugeFactory), address(timer), voterRolesAuth);
 
     ve.setVoter(address(voter));
 
@@ -381,7 +377,7 @@ contract BaseTest is Test {
     ionicToken.mint(address(this), 1000e18);
 
     // create the market gauge
-    (address gaugeAddress, , ) = voter.createMarketGauge(market, address(flywheel));
+    address gaugeAddress = voter.createMarketGauge(market, address(flywheel));
     MarketGauge marketGauge = MarketGauge(gaugeAddress);
 
     // create the lock

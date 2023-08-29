@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import "./interfaces/IMinter.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract EpochsTimer is IMinter, Initializable {
+contract PeriodsUpdater is IMinter, Initializable {
   uint public active_period;
   uint public constant TWO_WEEKS = 2 weeks;
 

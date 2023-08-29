@@ -5,7 +5,9 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721Upgradeable, IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { Ownable2StepUpgradeable } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
-abstract contract XERC721Upgradeable is ERC721Upgradeable, Ownable2StepUpgradeable {
+import { IXERC721 } from "./interfaces/IXERC721.sol";
+
+abstract contract XERC721Upgradeable is ERC721Upgradeable, Ownable2StepUpgradeable, IXERC721 {
   event BridgeAdded(address indexed bridge);
   event BridgeRemoved(address indexed bridge);
   event MintAsBridge(uint _tokenId, bytes _metadata);
@@ -46,6 +48,10 @@ abstract contract XERC721Upgradeable is ERC721Upgradeable, Ownable2StepUpgradeab
     }
     emit BridgeRemoved(_bridge);
     _whitelistedBridges[_bridge] = false;
+  }
+
+  function isBridge(address _bridge) external view returns (bool) {
+    return _whitelistedBridges[_bridge];
   }
 
   function mint(address _to, uint256 _tokenId, bytes memory _metadata) public onlyBridge {

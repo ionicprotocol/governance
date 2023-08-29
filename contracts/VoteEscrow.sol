@@ -64,39 +64,103 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   event Withdraw(address indexed provider, uint tokenId, uint value, uint ts);
   event Supply(uint prevSupply, uint supply);
 
+  uint internal constant TWO_WEEKS = 2 weeks;
+  uint internal constant MAXTIME = 52 weeks;
+  int128 internal constant iMAXTIME = 52 weeks;
+  uint internal constant MULTIPLIER = 1 ether;
+
   /*------------------------------------------------------------
-                               CONSTRUCTOR
+                               STORAGE
     ------------------------------------------------------------*/
 
   address public token;
   address public voter;
   address public team;
 
-  mapping(uint => Point) public point_history; // epoch -> unsigned point
-
-  // TODO remove?
-  /// @dev Mapping of interface id to bool about whether or not it's supported
-  mapping(bytes4 => bool) internal supportedInterfaces;
-
-  /// @dev ERC165 interface ID of ERC165
-  bytes4 internal constant ERC165_INTERFACE_ID = 0x01ffc9a7;
-
-  /// @dev ERC165 interface ID of ERC721
-  bytes4 internal constant ERC721_INTERFACE_ID = 0x80ac58cd;
-
-  /// @dev ERC165 interface ID of ERC721Metadata
-  bytes4 internal constant ERC721_METADATA_INTERFACE_ID = 0x5b5e139f;
-
   /// @dev Current count of token
   uint internal tokenId;
 
   uint256 public masterChainId;
+
   uint128 public constant ARBITRUM_ONE = 42161;
 
-  modifier onlyOnMasterChain() {
-    require(block.chainid == masterChainId, "wrong chain id");
-    _;
-  }
+  /*------------------------------------------------------------
+                             ESCROW STORAGE
+    ------------------------------------------------------------*/
+
+  mapping(uint => Point) public point_history; // epoch -> unsigned point
+  // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
+  mapping(uint => uint) public user_point_epoch;
+  // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
+  mapping(uint => Point[1000000000]) public user_point_history; // user -> Point[user_epoch]
+  // RESET_STORAGE_BURN: the var should be reset/updated on _beforeBurn/_afterMint and _deposit_for
+  mapping(uint => LockedBalance) public locked;
+
+  // TODO why is epoch incremented in the checkpoint fn?
+  uint public epoch;
+
+  mapping(uint => int128) public slope_changes; // time -> signed slope change
+
+  // @dev the total locked supply
+  uint public supply;
+
+  /*------------------------------------------------------------
+                         ERC721 APPROVAL STORAGE
+    ------------------------------------------------------------*/
+
+  mapping(uint => uint) public ownership_change;
+
+  /*------------------------------------------------------------
+                        INTERNAL MINT/BURN LOGIC
+    ------------------------------------------------------------*/
+
+  /// @dev Mapping from owner address to mapping of index to tokenIds
+  // RESET_STORAGE_BURN: this var is reset on _burn/_removeTokenFromOwnerList
+  mapping(address => mapping(uint => uint)) internal ownerToNFTokenIdList;
+
+  /// @dev Mapping from NFT ID to index of owner
+  // RESET_STORAGE_BURN: this var is reset on _burn/_removeTokenFromOwnerList
+  mapping(uint => uint) internal tokenToOwnerIndex;
+
+  /*------------------------------------------------------------/
+                             METADATA STORAGE
+    ------------------------------------------------------------*/
+
+  string public constant version = "1.0.0";
+
+  /*------------------------------------------------------------/
+                            DAO VOTING STORAGE
+    ------------------------------------------------------------*/
+
+  /// @notice The EIP-712 typehash for the contract's domain
+  bytes32 public constant DOMAIN_TYPEHASH =
+    keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+
+  /// @notice The EIP-712 typehash for the delegation struct used by the contract
+  bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
+
+  /// @notice A record of each accounts delegate
+  mapping(address => address) private _delegates;
+  uint public constant MAX_DELEGATES = 1024; // avoid too much gas
+
+  /// @notice A record of delegated token checkpoints for each account, by index
+  mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
+
+  /// @notice The number of checkpoints for each account
+  mapping(address => uint32) public numCheckpoints;
+
+  /// @notice A record of states for signing / validating signatures
+  mapping(address => uint) public nonces;
+
+  /*------------------------------------------------------------/
+                          GAUGE VOTING STORAGE
+    ------------------------------------------------------------*/
+
+  mapping(uint => bool) public voted;
+
+  /*------------------------------------------------------------
+                               CONSTRUCTOR
+    ------------------------------------------------------------*/
 
   constructor() {
     _disableInitializers();
@@ -111,7 +175,7 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
 
     _transferOwnership(msg.sender);
 
-    masterChainId = ARBITRUM_ONE;
+    masterChainId = block.chainid == 97 ? 97 : ARBITRUM_ONE;
 
     require(token_addr != address(0), "!token");
     token = token_addr;
@@ -122,30 +186,20 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     point_history[0].blk = block.number;
     point_history[0].ts = block.timestamp;
 
-    supportedInterfaces[ERC165_INTERFACE_ID] = true;
-    supportedInterfaces[ERC721_INTERFACE_ID] = true;
-    supportedInterfaces[ERC721_METADATA_INTERFACE_ID] = true;
-
     // mint-ish
     emit Transfer(address(0), address(this), tokenId);
     // burn-ish
     emit Transfer(address(this), address(0), tokenId);
   }
 
-  /*------------------------------------------------------------/
-                             METADATA STORAGE
-    ------------------------------------------------------------*/
-
-  string public constant version = "1.0.0";
+  modifier onlyOnMasterChain() {
+    require(block.chainid == masterChainId, "wrong chain id");
+    _;
+  }
 
   function setTeam(address _team) external {
     require(msg.sender == team, "!team");
     team = _team;
-  }
-
-  // TODO temp fn, remove
-  function setToken(address _token) external onlyOwner {
-    token = _token;
   }
 
   /// @dev Returns current token URI metadata
@@ -155,12 +209,6 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     LockedBalance memory _locked = locked[_tokenId];
     // return IVeArtProxy(artProxy)._tokenURI(_tokenId,_balanceOfNFT(_tokenId, block.timestamp),_locked.end,uint(int256(_locked.amount)));
   }
-
-  /*------------------------------------------------------------
-                         ERC721 APPROVAL STORAGE
-    ------------------------------------------------------------*/
-
-  mapping(uint => uint) public ownership_change;
 
   /*------------------------------------------------------------
                               ERC721 LOGIC
@@ -183,28 +231,6 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     // Set the block of ownership transfer (for Flash NFT protection)
     ownership_change[_tokenId] = block.number;
   }
-
-  /*------------------------------------------------------------
-                              ERC165 LOGIC
-    ------------------------------------------------------------*/
-
-  /// @dev Interface identification is specified in ERC-165.
-  /// @param _interfaceID Id of the interface
-  function supportsInterface(bytes4 _interfaceID) public view override returns (bool) {
-    return supportedInterfaces[_interfaceID];
-  }
-
-  /*------------------------------------------------------------
-                        INTERNAL MINT/BURN LOGIC
-    ------------------------------------------------------------*/
-
-  /// @dev Mapping from owner address to mapping of index to tokenIds
-  // RESET_STORAGE_BURN: this var is reset on _burn/_removeTokenFromOwnerList
-  mapping(address => mapping(uint => uint)) internal ownerToNFTokenIdList;
-
-  /// @dev Mapping from NFT ID to index of owner
-  // RESET_STORAGE_BURN: this var is reset on _burn/_removeTokenFromOwnerList
-  mapping(uint => uint) internal tokenToOwnerIndex;
 
   /// @dev  Get token by index
   function tokenOfOwnerByIndex(address _owner, uint _tokenIndex) external view returns (uint) {
@@ -267,8 +293,12 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     }
   }
 
+  function isApprovedForAll(address _owner, address _operator) public view override returns (bool) {
+    return _whitelistedBridges[_operator] || super.isApprovedForAll(_owner, _operator);
+  }
+
   function _burn(uint _tokenId) internal override {
-    require(_isApprovedOrOwner(msg.sender, _tokenId), "not owner nor approved");
+    require(_isApprovedOrOwner(msg.sender, _tokenId), "!owner or approved");
 
     address owner = ownerOf(_tokenId);
 
@@ -278,6 +308,9 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     _moveTokenDelegates(delegates(owner), address(0), _tokenId);
     // Remove token
     _removeTokenFromOwnerList(owner, _tokenId);
+
+    // TODO
+    _delegate(_ownerOf(_tokenId), address(0));
 
     // TODO use OZ ERC721Upgradeable or not?
     super._burn(_tokenId);
@@ -298,26 +331,6 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     locked[_tokenId] = LockedBalance(0, 0);
     _checkpoint(_tokenId, _locked, LockedBalance(0, 0));
   }
-
-  /*------------------------------------------------------------
-                             ESCROW STORAGE
-    ------------------------------------------------------------*/
-
-  // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
-  mapping(uint => uint) public user_point_epoch;
-  // RESET_STORAGE_BURN: the var seems to be reset/updated on _beforeBurn/_checkpoint
-  mapping(uint => Point[1000000000]) public user_point_history; // user -> Point[user_epoch]
-  // RESET_STORAGE_BURN: the var should be reset/updated on _beforeBurn/_afterMint and _deposit_for
-  // TODO more checks that it is only ever modified on the master chain
-  mapping(uint => LockedBalance) public locked;
-  uint public epoch;
-  mapping(uint => int128) public slope_changes; // time -> signed slope change
-  uint public supply;
-
-  uint internal constant TWO_WEEKS = 2 weeks;
-  uint internal constant MAXTIME = 52 weeks;
-  int128 internal constant iMAXTIME = 52 weeks;
-  uint internal constant MULTIPLIER = 1 ether;
 
   /*------------------------------------------------------------
                               ESCROW LOGIC
@@ -487,16 +500,15 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   /// @param _tokenId NFT that holds lock
   /// @param _value Amount to deposit
   /// @param unlock_time New time when to unlock the tokens, or 0 if unchanged
-  /// @param locked_balance Previous locked amount / timestamp
+  /// @param _locked Previous locked amount / timestamp
   /// @param deposit_type The type of deposit
   function _deposit_for(
     uint _tokenId,
     uint _value,
     uint unlock_time,
-    LockedBalance memory locked_balance,
+    LockedBalance memory _locked,
     DepositType deposit_type
   ) internal onlyOnMasterChain {
-    LockedBalance memory _locked = locked_balance;
     uint supply_before = supply;
 
     supply = supply_before + _value;
@@ -824,8 +836,6 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
                             GAUGE VOTING LOGIC
     ------------------------------------------------------------*/
 
-  mapping(uint => bool) public voted;
-
   function setVoter(address _voter) external {
     require(msg.sender == team, "!team");
     voter = _voter;
@@ -905,30 +915,6 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
       _deposit_for(_tokenId, _value, unlock_time, locked[_tokenId], DepositType.SPLIT_TYPE);
     }
   }
-
-  /*------------------------------------------------------------/
-                            DAO VOTING STORAGE
-    ------------------------------------------------------------*/
-
-  /// @notice The EIP-712 typehash for the contract's domain
-  bytes32 public constant DOMAIN_TYPEHASH =
-    keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
-
-  /// @notice The EIP-712 typehash for the delegation struct used by the contract
-  bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
-
-  /// @notice A record of each accounts delegate
-  mapping(address => address) private _delegates;
-  uint public constant MAX_DELEGATES = 1024; // avoid too much gas
-
-  /// @notice A record of delegated token checkpoints for each account, by index
-  mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
-
-  /// @notice The number of checkpoints for each account
-  mapping(address => uint32) public numCheckpoints;
-
-  /// @notice A record of states for signing / validating signatures
-  mapping(address => uint) public nonces;
 
   /**
    * @notice Overrides the standard `Comp.sol` delegates mapping to return
@@ -1109,14 +1095,16 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
   }
 
   // RESET_STORAGE_BURN: delegation is reset on _burn/_moveTokenDelegates(..., address(0), ...)
-  function _delegate(address delegator, address delegatee) internal onlyOnMasterChain {
-    /// @notice differs from `_delegate()` in `Comp.sol` to use `delegates` override method to simulate auto-delegation
-    address currentDelegate = delegates(delegator);
+  function _delegate(address delegator, address delegatee) internal {
+    if (block.chainid == masterChainId) {
+      /// @notice differs from `_delegate()` in `Comp.sol` to use `delegates` override method to simulate auto-delegation
+      address currentDelegate = delegates(delegator);
 
-    _delegates[delegator] = delegatee;
+      _delegates[delegator] = delegatee;
 
-    emit DelegateChanged(delegator, currentDelegate, delegatee);
-    _moveAllDelegates(delegator, currentDelegate, delegatee);
+      emit DelegateChanged(delegator, currentDelegate, delegatee);
+      _moveAllDelegates(delegator, currentDelegate, delegatee);
+    }
   }
 
   /**
