@@ -11,11 +11,11 @@ contract VoteEscrowFuzzTest is BaseTest {
   address charlie = address(768);
 
   function testLocksFixed() public {
-    testLocksFuzz(256, 21);
+    testLocksFuzz(21);
   }
 
-  function testLocksFuzz(uint16 runs, uint8 random) public {
-    vm.assume(runs > 20);
+  function testLocksFuzz(uint8 random) public {
+    uint16 runs = 250;
     vm.assume(random > 20);
 
     vm.label(alice, "alice");
@@ -104,5 +104,12 @@ contract VoteEscrowFuzzTest is BaseTest {
       }
       vm.stopPrank();
     }
+  }
+
+  function checkReset(uint256 _tokenId) internal {
+    (int128 amount, uint256 end) = ve.locked(_tokenId);
+    assertEq(amount, 0, "am");
+    assertEq(end, 0, "end");
+    // TODO voting on gauges
   }
 }
