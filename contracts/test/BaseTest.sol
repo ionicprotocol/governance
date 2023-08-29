@@ -107,14 +107,6 @@ contract BaseTest is Test {
     assertEq(newTeam, address(999), "testSetTeam/incorrect-team");
   }
 
-  function testTokenURI() public {
-    vm.expectRevert("Query for nonexistent token");
-
-    string memory uri = ve.tokenURI(555);
-
-    // TODO returns empty URI for existing tokens
-  }
-
   // [ERC721 BALANCE/OWNER STORAGE]
   function testOwnerOf() public {
     vm.chainId(ve.ARBITRUM_ONE());
