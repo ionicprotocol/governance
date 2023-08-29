@@ -15,11 +15,9 @@ contract MarketGauge is Gauge {
     address _rewardToken,
     address _ve,
     address _target,
-    address _voter,
-    address _internal_bribe,
-    address _external_bribe
+    address _voter
   ) external initializer {
-    __Gauge_init(_rewardToken, _ve, _target, _voter, _internal_bribe, _external_bribe);
+    __Gauge_init(_rewardToken, _ve, _target, _voter);
     flywheel = IFlywheel(_flywheel);
   }
 
@@ -33,32 +31,6 @@ contract MarketGauge is Gauge {
   function getReward(address _user) public override nonReentrant onlyVoter {
     flywheel.accrue(IERC20(target), _user);
     flywheel.claimRewards(_user);
-  }
-
-  function claimFees() external {
-    claimMarketFees();
-  }
-
-  function claimMarketFees() public nonReentrant returns (uint256) {
-    return abi.decode(_claimFees(), (uint256));
-  }
-
-  function _claimFees() internal override returns (bytes memory) {
-    uint256 fees = IMarket(target).totalAdminFees();
-
-    if (fees > 0) {
-      IMarket(target)._withdrawAdminFees(fees);
-      address underlying = IMarket(target).underlying();
-
-      if (fees > 0) {
-        // assuming that the admin is the gauge
-        IERC20(underlying).approve(internal_bribe, fees);
-        IBribe(internal_bribe).notifyRewardAmount(underlying, fees);
-      }
-      emit ClaimFees(msg.sender, fees);
-    }
-
-    return abi.encode(fees);
   }
 
   function setFlywheel(IFlywheel _flywheel) external onlyOwner {

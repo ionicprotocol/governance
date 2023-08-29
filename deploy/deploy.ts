@@ -1,5 +1,8 @@
 import { DeployFunction } from "hardhat-deploy/types";
 
+import { IonicToken } from "../typechain/IonicToken";
+import { VoteEscrow } from "../typechain/VoteEscrow";
+
 const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, getChainId }): Promise<void> => {
   console.log("RPC URL: ", ethers.provider.connection.url);
   const chainId = parseInt(await getChainId());
@@ -10,10 +13,11 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   const CHAPEL_ID = 97;
   const HARDHAT_ID = 1337;
   const MUMBAI_ID = 80001;
+  const ARBI_GOERLI_ID = 421613;
   // const ARBI_ID = 42161;
 
   let lockedTokenAddress;
-  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID) {
+  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID || chainId === ARBI_GOERLI_ID) {
     const ionicToken = await deployments.deploy("IonicToken", {
       contract: "IonicToken",
       from: deployer,
@@ -126,6 +130,10 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
         init: {
           methodName: "initialize",
           args: [voteEscrow.address, gaugeFactory.address, bribeFactory, timer.address, voterRolesAuth.address]
+        },
+        onUpgrade: {
+          methodName: "reinitialize",
+          args: [voteEscrow.address]
         }
       },
       owner: deployer,
@@ -134,12 +142,35 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   });
   console.log(`Voter deployed at ${voter.address}`);
 
-  const voteEscrowContract = await ethers.getContractAt(voteEscrow.abi, voteEscrow.address);
-  const tx = await voteEscrowContract.setVoter(voter.address);
-  await tx.wait();
-  console.log(`set the voter in the escrow with tx ${tx.hash}`);
+  const voteEscrowContract = (await ethers.getContractOrNull("VoteEscrow")) as VoteEscrow;
 
-  // TODO configure a bridge
+  const currentVoter = await voteEscrowContract.callStatic.voter();
+  if (currentVoter != voter.address) {
+    const tx = await voteEscrowContract.setVoter(voter.address);
+    await tx.wait();
+    console.log(`set the voter in the escrow with tx ${tx.hash}`);
+  }
+
+  if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID || chainId === ARBI_GOERLI_ID) {
+    const mockBridge = await deployments.deploy("MockBridge", {
+      contract: "MockBridge",
+      from: deployer,
+      args: [voteEscrow.address],
+      log: true,
+      waitConfirmations: 1,
+      skipIfAlreadyDeployed: true
+    });
+    console.log(`MockBridge deployed at ${mockBridge.address}`);
+
+    let tx = await voteEscrowContract.addBridge(mockBridge.address);
+    await tx.wait();
+    console.log(`enabled the bridge to mint NFTs ${tx.hash}`);
+
+    const ionicTokenContract = (await ethers.getContractOrNull("IonicToken")) as IonicToken;
+    tx = await ionicTokenContract.addBridge(mockBridge.address);
+    await tx.wait();
+    console.log(`enabled the bridge to mint ION ${tx.hash}`);
+  }
 };
 
 func.tags = ["prod"];

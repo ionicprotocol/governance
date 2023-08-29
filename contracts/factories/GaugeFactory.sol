@@ -61,12 +61,10 @@ contract GaugeFactory is IGaugeFactory, OwnableUpgradeable {
     address _rewardToken,
     address _ve,
     address _token,
-    address _distribution,
-    address _internal_bribe,
-    address _external_bribe
+    address _distribution
   ) external returns (address) {
     TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(gaugeLogic), _getProxyAdmin(), "");
-    PairGauge(address(proxy)).initialize(_rewardToken, _ve, _token, _distribution, _internal_bribe, _external_bribe);
+    PairGauge(address(proxy)).initialize(_rewardToken, _ve, _token, _distribution);
     last_gauge = address(proxy);
     _gauges.push(last_gauge);
     return last_gauge;
@@ -77,20 +75,10 @@ contract GaugeFactory is IGaugeFactory, OwnableUpgradeable {
     address _rewardToken,
     address _ve,
     address _token,
-    address _distribution,
-    address _internal_bribe,
-    address _external_bribe
+    address _distribution
   ) external returns (address) {
     TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(gaugeLogic), _getProxyAdmin(), "");
-    MarketGauge(address(proxy)).initialize(
-      _flywheel,
-      _rewardToken,
-      _ve,
-      _token,
-      _distribution,
-      _internal_bribe,
-      _external_bribe
-    );
+    MarketGauge(address(proxy)).initialize(_flywheel, _rewardToken, _ve, _token, _distribution);
     last_gauge = address(proxy);
     _gauges.push(last_gauge);
     return last_gauge;
@@ -127,14 +115,6 @@ contract GaugeFactory is IGaugeFactory, OwnableUpgradeable {
     uint i = 0;
     for (i; i < _gauges.length; i++) {
       IGauge(_gauges[i]).setVoter(voter);
-    }
-  }
-
-  function setInternalBribe(address[] memory int_bribe) external onlyAllowed {
-    require(_gauges.length == int_bribe.length);
-    uint i = 0;
-    for (i; i < _gauges.length; i++) {
-      IGauge(_gauges[i]).setInternalBribe(int_bribe[i]);
     }
   }
 }

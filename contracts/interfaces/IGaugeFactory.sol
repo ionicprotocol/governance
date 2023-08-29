@@ -6,9 +6,7 @@ interface IGaugeFactory {
     address _rewardToken,
     address _ve,
     address _target,
-    address _distribution,
-    address _internal_bribe,
-    address _external_bribe
+    address _distribution
   ) external returns (address);
 
   function createMarketGauge(
@@ -16,8 +14,6 @@ interface IGaugeFactory {
     address _rewardToken,
     address _ve,
     address _target,
-    address _distribution,
-    address _internal_bribe,
-    address _external_bribe
+    address _distribution
   ) external returns (address);
 }
