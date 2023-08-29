@@ -50,12 +50,7 @@ abstract contract Gauge is ReentrancyGuardUpgradeable, OwnableUpgradeable, IGaug
     _disableInitializers();
   }
 
-  function __Gauge_init(
-    address _rewardToken,
-    address _ve,
-    address _target,
-    address _voter
-  ) internal onlyInitializing {
+  function __Gauge_init(address _rewardToken, address _ve, address _target, address _voter) internal onlyInitializing {
     __Ownable_init();
     __ReentrancyGuard_init();
 

@@ -29,12 +29,7 @@ contract PairGauge is Gauge {
     _;
   }
 
-  function initialize(
-    address _rewardToken,
-    address _ve,
-    address _target,
-    address _voter
-  ) external initializer {
+  function initialize(address _rewardToken, address _ve, address _target, address _voter) external initializer {
     __Gauge_init(_rewardToken, _ve, _target, _voter);
     rewardToken = IERC20(_rewardToken);
     duration = 2 weeks;

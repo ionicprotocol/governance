@@ -42,16 +42,8 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   mapping(address => bool) public isGaugeFactory; // g.factory=> boolean [the gauge factory exists?]
   address public minter;
 
-  event PairGaugeCreated(
-    address indexed gauge,
-    address creator,
-    address indexed market
-  );
-  event MarketGaugeCreated(
-    address indexed gauge,
-    address creator,
-    address indexed target
-  );
+  event PairGaugeCreated(address indexed gauge, address creator, address indexed market);
+  event MarketGaugeCreated(address indexed gauge, address creator, address indexed target);
   event GaugeKilled(address indexed gauge);
   event GaugeRevived(address indexed gauge);
   event Voted(address indexed voter, uint tokenId, uint256 weight);
@@ -327,9 +319,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     --------------------------------------------------------------------------------
     ----------------------------------------------------------------------------- */
   /// @notice create multiple gauges
-  function createPairGauges(
-    address[] memory _targets
-  ) external nonReentrant returns (address[] memory) {
+  function createPairGauges(address[] memory _targets) external nonReentrant returns (address[] memory) {
     require(_targets.length <= 10, "max 10");
     address[] memory _gauge = new address[](_targets.length);
 
@@ -357,25 +347,18 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   }
 
   /// @notice create a gauge
-  function createPairGauge(
-    address _target
-  ) external nonReentrant returns (address _gauge) {
+  function createPairGauge(address _target) external nonReentrant returns (address _gauge) {
     _gauge = _createPairGauge(_target);
   }
 
   /// @notice create a gauge
-  function createMarketGauge(
-    address _target,
-    address _flywheel
-  ) external nonReentrant returns (address _gauge) {
+  function createMarketGauge(address _target, address _flywheel) external nonReentrant returns (address _gauge) {
     _gauge = _createMarketGauge(_target, _flywheel);
   }
 
   /// @notice create a gauge
   /// @param  _target  gauge target address
-  function _createPairGauge(
-    address _target
-  ) internal VoterAdmin returns (address _gauge) {
+  function _createPairGauge(address _target) internal VoterAdmin returns (address _gauge) {
     require(gauges[_target] == address(0x0), "!exists");
     address _gaugeFactory = gaugeFactories[0];
     require(_gaugeFactory != address(0), "zero addr gauge f");
@@ -389,12 +372,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     // create gauge
-    _gauge = IGaugeFactory(_gaugeFactory).createPairGauge(
-      base,
-      _ve,
-      _target,
-      address(this)
-    );
+    _gauge = IGaugeFactory(_gaugeFactory).createPairGauge(base, _ve, _target, address(this));
 
     // approve spending for $ion - used in IGauge(_gauge).notifyRewardAmount()
     IERC20(base).approve(_gauge, type(uint).max);
@@ -414,10 +392,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
   /// @notice create a gauge
   /// @param  _target  gauge target address
-  function _createMarketGauge(
-    address _target,
-    address _flywheel
-  ) internal VoterAdmin returns (address) {
+  function _createMarketGauge(address _target, address _flywheel) internal VoterAdmin returns (address) {
     require(gauges[_target] == address(0x0), "!exists");
     address _gaugeFactory = gaugeFactories[0];
     require(_gaugeFactory != address(0), "zero addr gauge f");
@@ -429,13 +404,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     // create gauge
-    address _gauge = IGaugeFactory(_gaugeFactory).createMarketGauge(
-      _flywheel,
-      base,
-      _ve,
-      _target,
-      address(this)
-    );
+    address _gauge = IGaugeFactory(_gaugeFactory).createMarketGauge(_flywheel, base, _ve, _target, address(this));
 
     // approve spending for $ion - used in IGauge(_gauge).notifyRewardAmount()
     IERC20(base).approve(_gauge, type(uint).max);
