@@ -11,7 +11,7 @@ contract VoteEscrowFuzzTest is BaseTest {
   address charlie = address(768);
 
   function testLocksFixed() public {
-    testLocksFuzz(220, 222);
+    testLocksFuzz(256, 21);
   }
 
   function testLocksFuzz(uint16 runs, uint8 random) public {
@@ -47,7 +47,7 @@ contract VoteEscrowFuzzTest is BaseTest {
         uint256 minterNfts = ve.balanceOf(minter);
         emit log_named_uint("minter nfts", minterNfts);
         if (minterNfts > 2) {
-          uint256 randi = random - i;
+          uint256 randi = random + i;
           if (i > 15 && randi % 4 == 0) {
             vm.stopPrank();
             vm.startPrank(bridge1);
