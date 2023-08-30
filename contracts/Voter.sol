@@ -264,7 +264,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
   function _vote(uint _tokenId, address[] memory _targetVote, uint256[] memory _weights) internal {
     _reset(_tokenId);
-    uint _targetCnt = _targetVote.length;
+    uint256 _targetCnt = _targetVote.length;
     uint256 _weight = IVoteEscrow(_ve).balanceOfNFT(_tokenId);
     uint256 _totalVoteWeight = 0;
     uint256 _totalWeight = 0;
@@ -296,7 +296,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
     if (_usedWeight > 0) IVoteEscrow(_ve).voting(_tokenId);
     totWeightsPerEpoch[_time] += _totalWeight;
-    usedWeights[_tokenId] = (_usedWeight);
+    usedWeights[_tokenId] = _usedWeight;
   }
 
   /// @notice claim LP gauge rewards

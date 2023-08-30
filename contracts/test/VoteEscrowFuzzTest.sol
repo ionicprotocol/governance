@@ -3,12 +3,15 @@ pragma solidity 0.8.19;
 
 import { Voter } from "../Voter.sol";
 import { VoteEscrow } from "../VoteEscrow.sol";
-import { BaseTest } from "./BaseTest.sol";
+import { BaseTest, IonicFlywheel } from "./BaseTest.sol";
 
 contract VoteEscrowFuzzTest is BaseTest {
   address alice = address(1);
   address bob = address(255);
   address charlie = address(768);
+
+  address[] markets;
+  address[] gauges;
 
   function testLocksFixed() public {
     testLocksFuzz(21);
@@ -25,6 +28,16 @@ contract VoteEscrowFuzzTest is BaseTest {
     address bridgingUser;
     uint256 bridgedTokenId;
     bytes memory bridgingMetadata;
+
+    for (uint160 i = 0; i < runs / 10; i++) {
+      address _rewardsContract = address(i);
+      address _market = address(i + 1023);
+      IonicFlywheel _flywheel = new IonicFlywheel(_rewardsContract);
+      address _gauge = voter.createMarketGauge(_market, address(_flywheel));
+
+      gauges.push(_gauge);
+      markets.push(_market);
+    }
 
     for (uint256 i = 0; i < runs; i++) {
       address minter;
@@ -63,6 +76,8 @@ contract VoteEscrowFuzzTest is BaseTest {
               bridgingMetadata = ve.burn(bridgedTokenId);
               bridgingUser = minter;
               emit log_named_uint("bridge burning", bridgedTokenId);
+
+              checkReset(bridgedTokenId);
             }
             vm.stopPrank();
             vm.startPrank(minter);
@@ -75,9 +90,10 @@ contract VoteEscrowFuzzTest is BaseTest {
                 uint256 half0 = nft2Balance / 2;
                 uint256 half1 = nft2Balance - half0;
                 ve.split(asArray(half0, half1), nft2);
+
+                checkReset(nft2);
               }
-            }
-            if (i > 10 && randi % 5 == 0) {
+            } else if (i > 10 && randi % 5 == 0) {
               uint256 nft0 = ve.tokenOfOwnerByIndex(minter, 0);
               uint256 nft1 = ve.tokenOfOwnerByIndex(minter, 1);
               uint256 nft2 = ve.tokenOfOwnerByIndex(minter, 2);
@@ -87,14 +103,22 @@ contract VoteEscrowFuzzTest is BaseTest {
                 emit log_named_uint("merging", nft2);
                 ve.merge(nft0, nft1);
                 ve.merge(nft1, nft2);
+
+                checkReset(nft0);
+                checkReset(nft1);
               }
-            }
-            if (i > 14 && randi % 7 == 0) {
+            } else if (i > 14 && randi % 7 == 0) {
               uint256 nft1 = ve.tokenOfOwnerByIndex(minter, 1);
               if (nft1 != 0 && block.timestamp > ve.locked__end(nft1)) {
                 emit log_named_uint("withdrawing", nft1);
                 ve.withdraw(nft1);
+
+                checkReset(nft1);
               }
+            }
+            if (i > 5 && randi % 2 == 0) {
+              uint256 nft1 = ve.tokenOfOwnerByIndex(minter, 1);
+              voter.vote(nft1, asArray(gauges[0], gauges[1], gauges[2]), asArray(1, 2, 3));
             }
           }
         }
@@ -110,6 +134,10 @@ contract VoteEscrowFuzzTest is BaseTest {
     (int128 amount, uint256 end) = ve.locked(_tokenId);
     assertEq(amount, 0, "am");
     assertEq(end, 0, "end");
-    // TODO voting on gauges
+
+    for (uint256 i = 0; i < markets.length; i++) {
+      uint256 votes = voter.votes(_tokenId, markets[i]);
+      assertEq(votes, 0, "!votes reset");
+    }
   }
 }
