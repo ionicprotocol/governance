@@ -135,8 +135,8 @@ contract VoteEscrowFuzzTest is BaseTest {
     assertEq(amount, 0, "am");
     assertEq(end, 0, "end");
 
-    for (uint256 i = 0; i < gauges.length; i++) {
-      uint256 votes = voter.votes(_tokenId, gauges[i]);
+    for (uint256 i = 0; i < markets.length; i++) {
+      uint256 votes = voter.votes(_tokenId, markets[i]);
       assertEq(votes, 0, "!votes reset");
     }
   }
