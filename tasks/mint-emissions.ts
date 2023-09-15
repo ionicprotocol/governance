@@ -3,7 +3,7 @@ import { task, types } from "hardhat/config";
 import { IonicToken } from "../typechain";
 
 task("mint:emissions")
-  .addParam("amount", "in wei (multiplied by 1e18)", "0", types.int)
+  .addParam("amount", "in ETH (floating point)", "0.0", types.string)
   .setAction(async ({ amount }, { ethers, getNamedAccounts, getChainId }) => {
     const ARBI_ID = 42161;
     const chainid = parseInt(await getChainId());
@@ -15,7 +15,7 @@ task("mint:emissions")
     const ion = (await ethers.getContract("IonicToken")) as IonicToken;
 
     let tx;
-    tx = await ion.mint(deployer, amount);
+    tx = await ion.mint(deployer, ethers.utils.parseEther(amount));
     console.log(`waiting for tx`, tx.hash);
     await tx.wait();
     console.log(`minted ${amount} of ION`);
