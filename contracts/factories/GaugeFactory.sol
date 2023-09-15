@@ -62,7 +62,7 @@ contract GaugeFactory is IGaugeFactory, OwnableUpgradeable {
     address _ve,
     address _token,
     address _distribution
-  ) external returns (address) {
+  ) external onlyAllowed returns (address) {
     TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(gaugeLogic), _getProxyAdmin(), "");
     PairGauge(address(proxy)).initialize(_rewardToken, _ve, _token, _distribution);
     last_gauge = address(proxy);
@@ -76,7 +76,7 @@ contract GaugeFactory is IGaugeFactory, OwnableUpgradeable {
     address _ve,
     address _token,
     address _distribution
-  ) external returns (address) {
+  ) external onlyAllowed returns (address) {
     TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(gaugeLogic), _getProxyAdmin(), "");
     MarketGauge(address(proxy)).initialize(_flywheel, _rewardToken, _ve, _token, _distribution);
     last_gauge = address(proxy);

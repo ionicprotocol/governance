@@ -3,7 +3,6 @@ pragma solidity 0.8.19;
 
 import "./interfaces/IGauge.sol";
 import "./interfaces/IGaugeFactory.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IMinter.sol";
 import "./interfaces/IMarket.sol";
 import "./interfaces/IVoter.sol";

@@ -56,6 +56,8 @@ contract BaseTest is Test {
       TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(address(impl), proxyAdmin, "");
       gaugeFactory = GaugeFactory(address(proxy));
       gaugeFactory.initialize(voterRolesAuth);
+
+      voterRolesAuth.configureRoles(address(gaugeFactory));
     }
 
     {
@@ -86,6 +88,7 @@ contract BaseTest is Test {
     voter.initialize(address(ve), address(gaugeFactory), address(timer), voterRolesAuth);
 
     ve.setVoter(address(voter));
+    voterRolesAuth.configureVoterPermissions(address(voter));
 
     vm.prank(ve.owner());
     ve.addBridge(bridge1);
