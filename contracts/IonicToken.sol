@@ -18,6 +18,12 @@ contract IonicToken is XERC20Upgradeable {
     __ProposedOwnable_init();
 
     _setOwner(msg.sender);
+
+    emit Transfer(address(0), address(0), 0);
+  }
+
+  function reinitialize() external reinitializer(2) {
+    emit Transfer(address(0), address(0), 0);
   }
 
   function isBridge(address _bridge) external view returns (bool) {

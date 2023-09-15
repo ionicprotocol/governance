@@ -28,6 +28,10 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
         init: {
           methodName: "initializeIon",
           args: []
+        },
+        onUpgrade: {
+          methodName: "reinitialize",
+          args: []
         }
       },
       owner: deployer,
@@ -46,7 +50,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
 
     const isOwnerMinter = await ion.callStatic.isBridge(deployer);
     if (!isOwnerMinter) {
-      let tx = await ion.addBridge(deployer);
+      const tx = await ion.addBridge(deployer);
       await tx.wait();
       console.log(`added the deployer ${deployer} as a minter`);
     } else {
