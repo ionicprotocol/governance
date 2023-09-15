@@ -2,6 +2,7 @@ import { DeployFunction } from "hardhat-deploy/types";
 
 import { IonicToken } from "../typechain/IonicToken";
 import { VoteEscrow } from "../typechain/VoteEscrow";
+import { VoterRolesAuthority } from "../typechain/VoterRolesAuthority";
 
 const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, getChainId }): Promise<void> => {
   console.log("RPC URL: ", ethers.provider.connection.url);
@@ -78,6 +79,11 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
     }
   });
   console.log(`GaugeFactory deployed at ${gaugeFactory.address}`);
+  const voterRolesAuthority = await ethers.getContract("VoterRolesAuthority") as VoterRolesAuthority;
+  let tx = await voterRolesAuthority.configureRoles(gaugeFactory.address);
+  console.log(`setting the gauge factory in the voter roles auth`, tx.hash);
+  await tx.wait();
+  console.log(`tx mined`);
 
   const voteEscrow = await deployments.deploy("VoteEscrow", {
     contract: "VoteEscrow",
@@ -141,9 +147,12 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
     }
   });
   console.log(`Voter deployed at ${voter.address}`);
+  tx = await voterRolesAuthority.configureVoterPermissions(voter.address);
+  console.log(`configuring the voter permissions`, tx.hash);
+  await tx.wait();
+  console.log(`tx mined`);
 
   const voteEscrowContract = (await ethers.getContractOrNull("VoteEscrow")) as VoteEscrow;
-
   const currentVoter = await voteEscrowContract.callStatic.voter();
   if (currentVoter != voter.address) {
     const tx = await voteEscrowContract.setVoter(voter.address);
