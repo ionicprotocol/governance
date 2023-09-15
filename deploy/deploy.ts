@@ -79,7 +79,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
     }
   });
   console.log(`GaugeFactory deployed at ${gaugeFactory.address}`);
-  const voterRolesAuthority = await ethers.getContract("VoterRolesAuthority") as VoterRolesAuthority;
+  const voterRolesAuthority = (await ethers.getContract("VoterRolesAuthority")) as VoterRolesAuthority;
   let tx = await voterRolesAuthority.configureRoles(gaugeFactory.address);
   console.log(`setting the gauge factory in the voter roles auth`, tx.hash);
   await tx.wait();
