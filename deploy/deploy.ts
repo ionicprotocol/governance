@@ -14,31 +14,44 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   const HARDHAT_ID = 1337;
   const MUMBAI_ID = 80001;
   const ARBI_GOERLI_ID = 421613;
-  // const ARBI_ID = 42161;
+  const ARBI_ID = 42161;
+  const POLYGON_ID = 137;
+
+  const ionicToken = await deployments.deploy("IonicToken", {
+    contract: "IonicToken",
+    from: deployer,
+    args: [],
+    log: true,
+    waitConfirmations: 1,
+    proxy: {
+      execute: {
+        init: {
+          methodName: "initializeIon",
+          args: []
+        }
+      },
+      owner: deployer,
+      proxyContract: "OpenZeppelinTransparentProxy"
+    }
+  });
+  console.log(`IonicToken deployed at ${ionicToken.address}`);
 
   let lockedTokenAddress;
   if (chainId === HARDHAT_ID || chainId === CHAPEL_ID || chainId === MUMBAI_ID || chainId === ARBI_GOERLI_ID) {
-    const ionicToken = await deployments.deploy("IonicToken", {
-      contract: "IonicToken",
-      from: deployer,
-      args: [],
-      log: true,
-      waitConfirmations: 1,
-      proxy: {
-        execute: {
-          init: {
-            methodName: "initializeIon",
-            args: []
-          }
-        },
-        owner: deployer,
-        proxyContract: "OpenZeppelinTransparentProxy"
-      }
-    });
-    console.log(`IonicToken deployed at ${ionicToken.address}`);
-
     // lock ION for testing
     lockedTokenAddress = ionicToken.address;
+  } else if (chainId == ARBI_ID) {
+    // make the owner a minter on Arbitrum
+    const ion = await ethers.getContract("IonicToken") as IonicToken;
+
+    const isOwnerMinter = await ion.callStatic.isBridge(deployer);
+    if (!isOwnerMinter) {
+      let tx = await ion.addBridge(deployer);
+      await tx.wait();
+      console.log(`added the deployer ${deployer} as a minter`);
+    } else {
+      console.log(`the deployer ${deployer} is already a minter`);
+    }
   } else {
     // lockedTokenAddress = BAL8020;
   }
