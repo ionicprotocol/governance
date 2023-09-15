@@ -70,7 +70,7 @@ const config: HardhatUserConfig = {
       url: OVERRIDE_RPC_URL || `https://polygon-mainnet.g.alchemy.com/v2/tldbE3dxJ4U5mH6aBYL3HhJAwwPWKVWw`,
       accounts: { mnemonic },
       chainId: 137
-    },
+    }
   }
 };
 

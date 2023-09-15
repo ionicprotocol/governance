@@ -46,7 +46,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
     lockedTokenAddress = ionicToken.address;
   } else if (chainId == ARBI_ID) {
     // make the owner a minter on Arbitrum
-    const ion = await ethers.getContract("IonicToken") as IonicToken;
+    const ion = (await ethers.getContract("IonicToken")) as IonicToken;
 
     const isOwnerMinter = await ion.callStatic.isBridge(deployer);
     if (!isOwnerMinter) {

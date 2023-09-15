@@ -1,5 +1,6 @@
-import {task, types} from "hardhat/config";
-import {IonicToken} from "../typechain";
+import { task, types } from "hardhat/config";
+
+import { IonicToken } from "../typechain";
 
 task("mint:emissions")
   .addParam("amount", "in wei (multiplied by 1e18)", "0", types.int)
@@ -11,7 +12,7 @@ task("mint:emissions")
     const { deployer } = await getNamedAccounts();
     console.log("deployer: ", deployer);
 
-    const ion = await ethers.getContract("IonicToken") as IonicToken;
+    const ion = (await ethers.getContract("IonicToken")) as IonicToken;
 
     let tx;
     tx = await ion.mint(deployer, amount);
