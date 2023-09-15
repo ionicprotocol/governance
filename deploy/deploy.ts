@@ -16,7 +16,7 @@ const func: DeployFunction = async ({ ethers, getNamedAccounts, deployments, get
   const MUMBAI_ID = 80001;
   const ARBI_GOERLI_ID = 421613;
   const ARBI_ID = 42161;
-  const POLYGON_ID = 137;
+  //const POLYGON_ID = 137;
 
   const ionicToken = await deployments.deploy("IonicToken", {
     contract: "IonicToken",

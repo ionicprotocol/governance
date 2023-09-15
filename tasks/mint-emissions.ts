@@ -14,7 +14,7 @@ task("mint:emissions")
 
     const ion = (await ethers.getContract("IonicToken")) as IonicToken;
 
-    let tx;
+    const tx;
     tx = await ion.mint(deployer, ethers.utils.parseEther(amount));
     console.log(`waiting for tx`, tx.hash);
     await tx.wait();
