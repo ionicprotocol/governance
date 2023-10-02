@@ -871,6 +871,9 @@ contract VoteEscrow is XERC721Upgradeable, IVotesUpgradeable, ReentrancyGuardUpg
     uint value0 = uint(int256(_locked0.amount));
     uint end = _locked0.end >= _locked1.end ? _locked0.end : _locked1.end;
 
+    // reset supply, _deposit_for increase it
+    supply = supply - value0;
+
     _beforeBurn(_from);
     _burn(_from);
 
