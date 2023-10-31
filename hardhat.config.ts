@@ -65,6 +65,11 @@ const config: HardhatUserConfig = {
       accounts: { mnemonic },
       chainId: 421613,
       url: OVERRIDE_RPC_URL || "https://endpoints.omniatech.io/v1/arbitrum/goerli/public"
+    },
+    polygon: {
+      url: OVERRIDE_RPC_URL || `https://polygon-mainnet.g.alchemy.com/v2/tldbE3dxJ4U5mH6aBYL3HhJAwwPWKVWw`,
+      accounts: { mnemonic },
+      chainId: 137
     }
   }
 };

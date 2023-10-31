@@ -36,7 +36,9 @@
     "deploy:localhost": "hardhat --network localhost deploy --tags prod --no-compile",
     "deploy:chapel": "hardhat --network chapel deploy --tags prod --no-compile",
     "deploy:arbigoerli": "hardhat --network arbigoerli deploy --tags prod --no-compile",
-    "deploy:mumbai": "hardhat --network mumbai deploy --tags prod --no-compile"
+    "deploy:mumbai": "hardhat --network mumbai deploy --tags prod --no-compile",
+    "deploy:arbi": "hardhat --network arbitrum deploy --tags prod --no-compile",
+    "deploy:polygon": "hardhat --network polygon deploy --tags prod --no-compile"
   },
   "files": [
     "contracts"
