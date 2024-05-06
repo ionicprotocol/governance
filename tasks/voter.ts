@@ -40,3 +40,21 @@ export default task("voter:factory", "increase the max gas fees to speed up a tx
         throw new Error(`invalid action ${action}`);
     }
   });
+
+// npx hardhat gf:create-market-gauge --action 0 --gauge 0x000 --network chapel
+task("voter:create-market-gauge", "create market gauge")
+  .addParam("signer", "The address of the current deployer", "deployer", types.string)
+  .addParam("flywheel", "The address of the flywheel deployed to the market", undefined, types.string)
+  .addParam("target", "The address of the market", undefined, types.string)
+  .setAction(async ({ signer, flywheel, market }, { ethers }) => {
+    const deployer = await ethers.getNamedSigner(signer);
+    const voter = (await ethers.getContract("Voter", deployer)) as Voter;
+
+    const tx = await voter.createMarketGauge(
+      market, // Target address
+      flywheel // Flywheel Address
+    );
+
+    await tx.wait();
+    console.log(`creating market gauge tx: ${tx.hash}`);
+  });
