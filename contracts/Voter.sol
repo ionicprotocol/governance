@@ -40,6 +40,8 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
   mapping(address => bool) public isAlive; // gauge    => boolean [is the gauge alive?]
   mapping(address => bool) public isGaugeFactory; // g.factory=> boolean [the gauge factory exists?]
   address public minter;
+  mapping(address => mapping(address => mapping(uint256 => uint256))) public votesForGaugePerEpochPerOwner; // owner => market/pool => epoch => votes
+  mapping(address => mapping(uint256 => uint256)) public totalVotesForGaugePerEpoch; // market/pool => epoch => votes
 
   event PairGaugeCreated(address indexed gauge, address creator, address indexed market);
   event MarketGaugeCreated(address indexed gauge, address creator, address indexed target);
@@ -209,6 +211,7 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint _targetVoteCnt = _targetVote.length;
     uint256 _totalWeight = 0;
     uint256 _time = _epochTimestamp();
+    address _owner = IVoteEscrow(_ve).ownerOf(_tokenId);
 
     for (uint i = 0; i < _targetVoteCnt; i++) {
       address _target = _targetVote[i];
@@ -219,6 +222,8 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
         if (lastVoted[_tokenId] > _epochTimestamp()) weightsPerEpoch[_time][_target] -= _votes;
 
         votes[_tokenId][_target] -= _votes;
+        totalVotesForGaugePerEpoch[_target][_time] -= _votes;
+        votesForGaugePerEpochPerOwner[_owner][_target][_time] += _votes;
         _totalWeight += _votes;
 
         emit Abstained(_tokenId, _votes);
@@ -261,41 +266,56 @@ contract Voter is IVoter, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     lastVoted[_tokenId] = _epochTimestamp() + 1;
   }
 
-  function _vote(uint _tokenId, address[] memory _targetVote, uint256[] memory _weights) internal {
-    _reset(_tokenId);
-    uint256 _targetCnt = _targetVote.length;
-    uint256 _weight = IVoteEscrow(_ve).balanceOfNFT(_tokenId);
-    uint256 _totalVoteWeight = 0;
-    uint256 _totalWeight = 0;
-    uint256 _usedWeight = 0;
-    uint256 _time = _epochTimestamp();
+  struct VoteLocalVars {
+    uint256 _targetCnt;
+    uint256 _weight;
+    address _owner;
+    uint256 _totalVoteWeight;
+    uint256 _totalWeight;
+    uint256 _usedWeight;
+    uint256 _time;
+  }
 
-    for (uint i = 0; i < _targetCnt; i++) {
-      _totalVoteWeight += _weights[i];
+  function _vote(uint _tokenId, address[] memory _targetVote, uint256[] memory _weights) internal {
+    VoteLocalVars memory vars;
+
+    _reset(_tokenId);
+    vars._targetCnt = _targetVote.length;
+    vars._weight = IVoteEscrow(_ve).balanceOfNFT(_tokenId);
+    vars._owner = IVoteEscrow(_ve).ownerOf(_tokenId);
+    vars._totalVoteWeight = 0;
+    vars._totalWeight = 0;
+    vars._usedWeight = 0;
+    vars._time = _epochTimestamp();
+
+    for (uint i = 0; i < vars._targetCnt; i++) {
+      vars._totalVoteWeight += _weights[i];
     }
 
-    for (uint i = 0; i < _targetCnt; i++) {
+    for (uint i = 0; i < vars._targetCnt; i++) {
       address _target = _targetVote[i];
       address _gauge = gauges[_target];
 
       if (isGauge[_gauge] && isAlive[_gauge]) {
-        uint256 _targetWeight = (_weights[i] * _weight) / _totalVoteWeight;
+        uint256 _targetWeight = (_weights[i] * vars._weight) / vars._totalVoteWeight;
         require(votes[_tokenId][_target] == 0, "already voted for target");
         require(_targetWeight != 0, "zero vote w");
 
         targetVote[_tokenId].push(_target);
-        weightsPerEpoch[_time][_target] += _targetWeight;
+        weightsPerEpoch[vars._time][_target] += _targetWeight;
+        totalVotesForGaugePerEpoch[_target][vars._time] += _targetWeight;
+        votesForGaugePerEpochPerOwner[vars._owner][_target][vars._time] += _targetWeight;
 
         votes[_tokenId][_target] += _targetWeight;
 
-        _usedWeight += _targetWeight;
-        _totalWeight += _targetWeight;
+        vars._usedWeight += _targetWeight;
+        vars._totalWeight += _targetWeight;
         emit Voted(msg.sender, _tokenId, _targetWeight);
       }
     }
-    if (_usedWeight > 0) IVoteEscrow(_ve).voting(_tokenId);
-    totWeightsPerEpoch[_time] += _totalWeight;
-    usedWeights[_tokenId] = _usedWeight;
+    if (vars._usedWeight > 0) IVoteEscrow(_ve).voting(_tokenId);
+    totWeightsPerEpoch[vars._time] += vars._totalWeight;
+    usedWeights[_tokenId] = vars._usedWeight;
   }
 
   /// @notice claim LP gauge rewards
